@@ -169,7 +169,7 @@ pub fn run(state: EditorStateRef) {
                         if Some(VirtualKeyCode::S) == virtual_keycode {
                             match state.borrow().open_file.save() {
                                 Err(e) => println!("Error while saving: {}", e),
-                                _ => (),
+                                _ => println!("Saved successfully"),
                             }
                         }
                     }
@@ -214,7 +214,7 @@ fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel) {
     let (x_width, _) = font.measure_str("X", Some(&paint));
     let line_height = rect.height() * 1.4;
 
-    let mut y = 0.;
+    let mut y = -line_height * (doc.cursor.row as f32) + 100.;
     let mut rowi = 0;
 
     for line in doc.lines.iter() {
