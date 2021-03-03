@@ -2,6 +2,7 @@
 
 use crate::model::EditorStateRef;
 use crate::model::TextModel;
+use crate::input::VimInput;
 use glutin::event::ModifiersState;
 use skia_safe as skia;
 
@@ -37,7 +38,7 @@ pub fn run(state: EditorStateRef) {
 
     let el = EventLoop::new();
     let wb = WindowBuilder::new()
-        .with_inner_size(glutin::dpi::LogicalSize::new(500, 400))
+        .with_inner_size(glutin::dpi::LogicalSize::new(1500, 1000))
         .with_title("fed");
 
     let cb = glutin::ContextBuilder::new()
@@ -117,7 +118,9 @@ pub fn run(state: EditorStateRef) {
         ),
     )
     .unwrap();
-    let font = skia::Font::new(tf, Some(14.));
+    let font = skia::Font::new(tf, Some(20.));
+
+    let mut input = VimInput::new();
 
     el.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -164,6 +167,8 @@ pub fn run(state: EditorStateRef) {
                             map_text_model(&|x| x.move_cursor((0, -1)));
                         } else if Some(VirtualKeyCode::Right) == virtual_keycode {
                             map_text_model(&|x| x.move_cursor((0, 1)));
+                        } else if Some(VirtualKeyCode::Tab) == virtual_keycode {
+                            map_text_model(&|x| x.insert("    "));
                         }
                     } else if modifiers == ModifiersState::CTRL {
                         if Some(VirtualKeyCode::S) == virtual_keycode {
@@ -177,13 +182,14 @@ pub fn run(state: EditorStateRef) {
                     windowed_context.window().request_redraw();
                 }
                 WindowEvent::ReceivedCharacter(c) => {
-                    if c == '\x08' {
-                        map_text_model(&|x| x.backspace_key());
-                    } else if c == '\r' {
-                        map_text_model(&|x| x.insert_newline());
-                    } else if c >= ' ' {
-                        map_text_model(&|x| x.insert(c.to_string().as_str()));
-                    }
+                    use crate::input::EditorAction::*;
+
+                    match input.receive_char(c) {
+                        Some(InsertString(str)) => map_text_model(&|x| x.insert(str.as_str())),
+                        Some(InsertNewline) => map_text_model(&|x| x.insert_newline()),
+                        Some(DeleteLeft) => map_text_model(&|x| x.backspace_key()),
+                        _ => (),
+                    };
                 }
                 _ => (),
             },
@@ -196,7 +202,7 @@ pub fn run(state: EditorStateRef) {
                     canvas.reset_matrix();
                     canvas.scale((sf, sf));
 
-                    render(&mut canvas, &font, &state.borrow().open_file.model);
+                    render(&mut canvas, &font, &state.borrow().open_file.model, &input, );
                 }
                 surface.canvas().flush();
                 windowed_context.swap_buffers().unwrap();
@@ -206,15 +212,16 @@ pub fn run(state: EditorStateRef) {
     });
 }
 
-fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel) {
+fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel, input: &VimInput) {
     let paint = skia::Paint::new(skia::Color4f::new(1., 1., 1., 1.), None);
+    let bg_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.2, 0.2, 1.), None);
     // canvas.draw_rect(&rect, &paint);
     // let (_line_spacing, metrics) = font.metrics();
     let (_, rect) = font.measure_str("Xg", Some(&paint));
     let (x_width, _) = font.measure_str("X", Some(&paint));
     let line_height = rect.height() * 1.4;
 
-    let mut y = -line_height * (doc.cursor.row as f32) + 100.;
+    let mut y = -line_height * (doc.cursor.row as f32) + 500.;
     let mut rowi = 0;
 
     for line in doc.lines.iter() {
@@ -234,4 +241,13 @@ fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel) {
         y += line_height;
         rowi += 1;
     }
+
+    canvas.draw_rect(skia::Rect::from_xywh(0., 0., 10000., line_height + 4.), &bg_paint);
+
+    canvas.draw_str(
+        input.mode.to_string(),
+        skia::Point::new(0., line_height),
+        font,
+        &paint,
+    ); 
 }

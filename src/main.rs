@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 mod gui;
 mod model;
+mod input;
 
 #[derive(Clap)]
 struct Opts {
@@ -26,7 +27,10 @@ fn main() {
     });
 
     let doc = model::TextModel::new();
-    let doc = doc.load_from(&path).unwrap();
+    let doc = match doc.load_from(&path) {
+        Err(e) => { println!("Error loading file"); doc },
+        Ok(doc) => doc,
+    };
 
     let state = make_ref(model::EditorState {
         open_file: model::OpenFile { model: doc, path },
