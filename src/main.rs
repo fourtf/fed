@@ -36,7 +36,7 @@ fn main() {
         open_file: model::OpenFile {
             model: doc,
             path,
-            selection: model::Selection::empty(),
+            ..Default::default()
         },
     });
 

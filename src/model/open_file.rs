@@ -4,9 +4,12 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::path::PathBuf;
+use std::collections::VecDeque;
 
+#[derive(Default)]
 pub struct OpenFile {
     pub model: TextModel,
+    pub undo_stack: VecDeque<TextModel>,
     pub path: PathBuf,
     pub selection: Selection,
 }

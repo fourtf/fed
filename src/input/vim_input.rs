@@ -1,7 +1,10 @@
 use std::fmt;
-use phf::phf_map;
+use crate::model::LocDelta;
+use smallvec::{SmallVec, smallvec};
+use std::collections::HashMap;
+use once_cell::sync::Lazy;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Mode {
     Normal,
     Insert,
@@ -25,23 +28,40 @@ pub enum EditorAction {
     DeleteLeft,
     InsertNewline,
     Copy,
-    CopyLine,
     Cut,
     Paste,
     BeginSelection,
     EndSelection,
+    GoTo(Location),
+}
+
+pub type EditorActions = SmallVec<[EditorAction; 4]>;
+
+#[derive(Debug, Clone)]
+pub enum Location {
+    StartOfLine,
+    EndOfLine,
+    FirstLine,
+    LastLine,
+    Offset(LocDelta),
 }
 
 #[derive(Debug)]
 enum KeybindAction {
-    PerformEditorAction(EditorAction),
+    PerformEditorActions(EditorActions),
     EnterInsertMode,
     EnterVisualMode,
 }
 
 impl From<EditorAction> for KeybindAction {
     fn from(action: EditorAction) -> KeybindAction {
-        return KeybindAction::PerformEditorAction(action);
+        return KeybindAction::PerformEditorActions(smallvec![action]);
+    }
+}
+
+impl From<EditorActions> for KeybindAction {
+    fn from(actions: EditorActions) -> KeybindAction {
+        return KeybindAction::PerformEditorActions(actions);
     }
 }
 
@@ -52,34 +72,34 @@ impl VimInput {
         }
     }
 
-    pub fn receive_char(&mut self, c: char) -> Option<EditorAction> {
+    pub fn receive_char(&mut self, c: char) -> EditorActions {
         use EditorAction::*;
 
         match &self.mode {
             Mode::Normal => {
                 match NORMAL_KEYBINDINGS.get(c.to_string().as_str()) {
                     Some(action) => self.perform_action(action),
-                    None => None
+                    None => Default::default(),
                 }
             },
             Mode::Insert => {
                 if c == '\r' {
-                    Some(InsertNewline)
+                    smallvec![InsertNewline]
                 } else if c == '\x08' {
-                    Some(DeleteLeft)
+                    smallvec![DeleteLeft]
                 } else if c == '\x1B' {
                     self.mode = Mode::Normal;
-                    None
+                    smallvec![]
                 } else if c >= ' ' {
-                    Some(InsertString(c.to_string()))
+                    smallvec![InsertString(c.to_string())]
                 } else {
-                    None
+                    smallvec![]
                 }
             }
             Mode::Visual => {
                 if c == '\x1B' {
                     self.mode = Mode::Normal;
-                    return Some(EditorAction::EndSelection);
+                    return smallvec![EditorAction::EndSelection];
                 }
                 
                 return match VISUAL_KEYBINDINGS.get(c.to_string().as_str()) {
@@ -87,42 +107,57 @@ impl VimInput {
                         self.mode = Mode::Normal;
                         self.perform_action(action)
                     },
-                    None => None,
+                    None => smallvec![],
                 }
             },
         }
     }
 
-    pub fn perform_action(&mut self, action: &KeybindAction) -> Option<EditorAction> {
+    pub fn perform_action(&mut self, action: &KeybindAction) -> EditorActions {
         use KeybindAction::*;
 
         match action {
             EnterInsertMode => {
                 self.mode = Mode::Insert;
-                None
+                smallvec![]
             },
             EnterVisualMode => {
                 self.mode = Mode::Visual;
-                Some(EditorAction::BeginSelection)
+                smallvec![EditorAction::BeginSelection]
             },
-            PerformEditorAction(action) => Some(action.clone()), 
+            PerformEditorActions(actions) => actions.clone(),
         }
     }
 }
 
-macro_rules! ea {
-    ($x:expr) => (KeybindAction::PerformEditorAction($x))
-}
+//macro_rules! ea {
+//   ($x:expr) => (KeybindAction::PerformEditorActions($x))
+//}
 
-static NORMAL_KEYBINDINGS: phf::Map<&'static str, KeybindAction> = phf_map! {
-    "i" => KeybindAction::EnterInsertMode,
-    "a" => KeybindAction::EnterInsertMode,
-    "v" => KeybindAction::EnterVisualMode,
-    "yy" => ea!(EditorAction::CopyLine),
-    "p" => ea!(EditorAction::Paste),
-};
+macro_rules! map(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+     };
+);
 
-static VISUAL_KEYBINDINGS: phf::Map<&'static str, KeybindAction> = phf_map! {
-    "y" => ea!(EditorAction::Copy),
-    "d" => ea!(EditorAction::Cut),
-};
+static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindAction>> = Lazy::new(|| map!{
+        "i" => KeybindAction::EnterInsertMode.into(),
+        "a" => KeybindAction::EnterInsertMode.into(),
+        "$" => EditorAction::GoTo(Location::EndOfLine).into(),
+        "0" => EditorAction::GoTo(Location::StartOfLine).into(),
+        "g" => EditorAction::GoTo(Location::FirstLine).into(),
+        "G" => EditorAction::GoTo(Location::LastLine).into(),
+        "v" => KeybindAction::EnterVisualMode.into(),
+        "p" => EditorAction::Paste.into()
+    });
+
+static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindAction>> = Lazy::new(|| map!{
+        "y" => EditorAction::Copy.into(),
+        "d" => EditorAction::Cut.into()
+    });

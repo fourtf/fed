@@ -58,6 +58,11 @@ impl Loc {
         Loc::new(cursor.row, cursor.column.min(max_col))
     }
 
+    pub fn constrain_only_row(&self, lines: &im::Vector<String>) -> Loc {
+        let lc = get_last_cursor(lines);
+        self.min(&lc).clone()
+    }
+
     pub fn with_row(&self, row: usize) -> Self {
         Self {
             column: self.column,
@@ -109,7 +114,7 @@ fn get_last_cursor(lines: &im::Vector<String>) -> Loc {
  *
  * first are start/end except with first < last
  */
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Selection {
     pub first: Loc,
     pub last: Loc,
@@ -170,7 +175,6 @@ impl TextModel {
     #[must_use]
     pub fn move_cursor<D: Into<LocDelta>>(&self, offset: D) -> Self {
         let offset = offset.into();
-        println!("{:?}", offset);
 
         Self {
             cursor: if offset.column == 0 {
@@ -179,7 +183,7 @@ impl TextModel {
                 self.cursor.offset(offset).constrain(&self.lines)
             },
             original_cursor: if offset.column == 0 {
-                Some(self.original_cursor.unwrap_or(self.cursor).offset(offset))
+                Some(self.original_cursor.unwrap_or(self.cursor).offset(offset).constrain_only_row(&self.lines))
             } else {
                 None
             },
