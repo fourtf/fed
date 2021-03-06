@@ -79,6 +79,7 @@ impl From<(usize, usize)> for Loc {
     }
 }
 
+#[derive(Default, Debug, Clone, Copy)]
 pub struct LocDelta {
     row: isize,
     column: isize,
@@ -108,7 +109,7 @@ fn get_last_cursor(lines: &im::Vector<String>) -> Loc {
  *
  * first are start/end except with first < last
  */
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Selection {
     pub first: Loc,
     pub last: Loc,
@@ -128,8 +129,16 @@ impl Selection {
         }
     }
 
+    pub fn empty() -> Self {
+        Self::new(Loc::zero(), Loc::zero())
+    }
+
     pub fn with_end(&self, end: Loc) -> Self {
         Selection::new(self.start, end)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
     }
 }
 
@@ -137,6 +146,7 @@ impl Selection {
 pub struct TextModel {
     pub lines: im::Vector<String>,
     pub cursor: Loc,
+    pub original_cursor: Option<Loc>,
 }
 
 impl TextModel {
@@ -159,8 +169,20 @@ impl TextModel {
 
     #[must_use]
     pub fn move_cursor<D: Into<LocDelta>>(&self, offset: D) -> Self {
+        let offset = offset.into();
+        println!("{:?}", offset);
+
         Self {
-            cursor: self.cursor.offset(offset.into()).constrain(&self.lines),
+            cursor: if offset.column == 0 {
+                self.original_cursor.unwrap_or(self.cursor).offset(offset).constrain(&self.lines)
+            } else {
+                self.cursor.offset(offset).constrain(&self.lines)
+            },
+            original_cursor: if offset.column == 0 {
+                Some(self.original_cursor.unwrap_or(self.cursor).offset(offset))
+            } else {
+                None
+            },
             ..self.clone()
         }
     }
@@ -194,6 +216,7 @@ impl TextModel {
         Self {
             lines: pre + inbetween + post,
             cursor,
+            original_cursor: None,
             ..self.clone()
         }
     }
@@ -234,6 +257,7 @@ impl TextModel {
         Self {
             lines,
             cursor,
+            original_cursor: None,
 
             ..self.clone()
         }
@@ -262,8 +286,51 @@ impl TextModel {
         Self {
             lines,
             cursor: self.cursor.add_wrapped((1, 0)),
+            original_cursor: None,
             ..self.clone()
         }
+    }
+
+    pub fn delete(&self, selection: Selection) -> TextModel {
+        let mut lines = self.lines.clone();
+
+        let post = lines.slice((selection.last.row + 1)..);
+        let pre = //if selection.first.row == 0 {
+                     //    im::Vector::<String>::new()
+                     //} else {
+                         lines.slice(..selection.first.row);
+                     //}
+        let inbetween = lines;
+        let inbetween = im::Vector::<String>::unit(
+                inbetween.front().map(|x| x[..selection.first.column].to_string()).unwrap_or_default() +
+                inbetween.back().map(|x| &x[selection.last.column..]).unwrap_or("")
+            );
+
+        Self {
+            lines: pre + inbetween + post,
+            cursor: selection.first,
+            original_cursor: None,
+            ..self.clone()
+        }
+    }
+
+    pub fn get_string(&self, selection: Selection) -> String {
+        let mut result = String::new();
+
+        for row in selection.first.row..=selection.last.row {
+            match self.lines.get(row) {
+                Some(line) => {
+                    let l = if row == selection.first.row { selection.first.column } else { 0 };
+                    let r = if row == selection.last.row { selection.last.column } else { line.len() };
+
+                    result.push_str(&line[l..r]);
+                    result.push_str("\n");
+                },
+                _ => (),
+            }
+        }
+
+        result
     }
 
     #[must_use]

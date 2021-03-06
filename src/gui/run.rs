@@ -1,10 +1,10 @@
 // mod model;
 
-use crate::model::EditorStateRef;
-use crate::model::TextModel;
+use crate::model::{EditorStateRef, TextModel, Selection};
 use crate::input::VimInput;
 use glutin::event::ModifiersState;
 use skia_safe as skia;
+use clipboard::{ClipboardProvider, ClipboardContext};
 
 // ![allow(dead_code)]
 // cargo 1.45.1 / rustfmt 1.4.17-stable fails to process the relative path on Windows.
@@ -170,6 +170,15 @@ pub fn run(state: EditorStateRef) {
                         } else if Some(VirtualKeyCode::Tab) == virtual_keycode {
                             map_text_model(&|x| x.insert("    "));
                         }
+
+                        match input.mode {
+                            crate::input::Mode::Visual => {
+                                let selection = state.borrow().open_file.selection;
+                                let cursor = state.borrow().open_file.model.cursor;
+                                state.borrow_mut().open_file.selection = selection.with_end(cursor);
+                            },
+                            _ => (),
+                        }
                     } else if modifiers == ModifiersState::CTRL {
                         if Some(VirtualKeyCode::S) == virtual_keycode {
                             match state.borrow().open_file.save() {
@@ -188,6 +197,29 @@ pub fn run(state: EditorStateRef) {
                         Some(InsertString(str)) => map_text_model(&|x| x.insert(str.as_str())),
                         Some(InsertNewline) => map_text_model(&|x| x.insert_newline()),
                         Some(DeleteLeft) => map_text_model(&|x| x.backspace_key()),
+                        Some(Copy) => {
+                            let s = state.borrow().open_file.model.get_string(state.borrow().open_file.selection);
+
+                            // TODO: make safe
+                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                            ctx.set_contents(s).unwrap();
+                        },
+                        Some(Paste) => {
+                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                            // TODO: make safe
+                            let s = ctx.get_contents().unwrap_or(String::new());
+                            map_text_model(&|x| x.insert(&*s));
+                        },
+                        Some(Cut) => {
+                            let selection = state.borrow().open_file.selection;
+                            state.borrow_mut().open_file.selection = Selection::empty();
+                            map_text_model(&|x| x.delete(selection));
+                        },
+                        Some(BeginSelection) => {
+                            let cursor = state.borrow().open_file.model.cursor;
+                            state.borrow_mut().open_file.selection = crate::model::Selection::new(cursor, cursor);
+                        },
+                        Some(EndSelection) => { state.borrow_mut().open_file.selection = Selection::empty(); },
                         _ => (),
                     };
                 }
@@ -202,7 +234,12 @@ pub fn run(state: EditorStateRef) {
                     canvas.reset_matrix();
                     canvas.scale((sf, sf));
 
-                    render(&mut canvas, &font, &state.borrow().open_file.model, &input, );
+                    render(
+                        &mut canvas,
+                        &font,
+                        &state.borrow().open_file.model,
+                        &state.borrow().open_file.selection,
+                        &input);
                 }
                 surface.canvas().flush();
                 windowed_context.swap_buffers().unwrap();
@@ -212,22 +249,39 @@ pub fn run(state: EditorStateRef) {
     });
 }
 
-fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel, input: &VimInput) {
-    let paint = skia::Paint::new(skia::Color4f::new(1., 1., 1., 1.), None);
-    let bg_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.2, 0.2, 1.), None);
+fn render(
+    canvas: &mut skia::Canvas,
+    font: &skia::Font,
+    doc: &TextModel,
+    selection: &Selection,
+    input: &VimInput
+) {
+    let paint = skia::Paint::new(skia::Color4f::new(1.0, 1.0, 1.0, 1.0), None);
+    let bg_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.2, 0.2, 1.0), None);
+    let selection_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.22, 0.3, 1.0), None);
     // canvas.draw_rect(&rect, &paint);
     // let (_line_spacing, metrics) = font.metrics();
     let (_, rect) = font.measure_str("Xg", Some(&paint));
     let (x_width, _) = font.measure_str("X", Some(&paint));
-    let line_height = rect.height() * 1.4;
+    let line_height = rect.height() * 1.6;
+    let text_offset_y = rect.height() * 1.3;
 
     let mut y = -line_height * (doc.cursor.row as f32) + 500.;
     let mut rowi = 0;
 
     for line in doc.lines.iter() {
+        if !selection.is_empty() &&
+                selection.first.row <= rowi &&
+                selection.last.row >= rowi {
+            let l = if selection.first.row == rowi { x_width * (selection.first.column as f32) } else { 0. };
+            let r = if selection.last.row == rowi { x_width * (selection.last.column as f32) } else { x_width * (line.len() as f32) };
+
+            canvas.draw_rect(skia::Rect::new(l, y, r + (x_width * 0.2), y + line_height), &selection_paint);
+        }
+
         canvas.draw_str(
             line.as_str(),
-            skia::Point::new(0., y + line_height),
+            skia::Point::new(0., y + text_offset_y),
             font,
             &paint,
         );
@@ -242,12 +296,12 @@ fn render(canvas: &mut skia::Canvas, font: &skia::Font, doc: &TextModel, input: 
         rowi += 1;
     }
 
-    canvas.draw_rect(skia::Rect::from_xywh(0., 0., 10000., line_height + 4.), &bg_paint);
+    canvas.draw_rect(skia::Rect::from_xywh(0., 0., 10000., line_height), &bg_paint);
 
     canvas.draw_str(
         input.mode.to_string(),
-        skia::Point::new(0., line_height),
+        skia::Point::new(0., text_offset_y),
         font,
         &paint,
-    ); 
+    );
 }

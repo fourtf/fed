@@ -33,7 +33,11 @@ fn main() {
     };
 
     let state = make_ref(model::EditorState {
-        open_file: model::OpenFile { model: doc, path },
+        open_file: model::OpenFile {
+            model: doc,
+            path,
+            selection: model::Selection::empty(),
+        },
     });
 
     gui::run(state);

@@ -1,4 +1,4 @@
-use super::text_model::TextModel;
+use super::text_model::{Selection, TextModel};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -8,6 +8,7 @@ use std::path::PathBuf;
 pub struct OpenFile {
     pub model: TextModel,
     pub path: PathBuf,
+    pub selection: Selection,
 }
 
 impl OpenFile {

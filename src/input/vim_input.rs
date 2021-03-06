@@ -26,7 +26,10 @@ pub enum EditorAction {
     InsertNewline,
     Copy,
     CopyLine,
+    Cut,
     Paste,
+    BeginSelection,
+    EndSelection,
 }
 
 #[derive(Debug)]
@@ -76,8 +79,16 @@ impl VimInput {
             Mode::Visual => {
                 if c == '\x1B' {
                     self.mode = Mode::Normal;
+                    return Some(EditorAction::EndSelection);
                 }
-                None
+                
+                return match VISUAL_KEYBINDINGS.get(c.to_string().as_str()) {
+                    Some(action) => {
+                        self.mode = Mode::Normal;
+                        self.perform_action(action)
+                    },
+                    None => None,
+                }
             },
         }
     }
@@ -92,7 +103,7 @@ impl VimInput {
             },
             EnterVisualMode => {
                 self.mode = Mode::Visual;
-                None
+                Some(EditorAction::BeginSelection)
             },
             PerformEditorAction(action) => Some(action.clone()), 
         }
@@ -112,5 +123,6 @@ static NORMAL_KEYBINDINGS: phf::Map<&'static str, KeybindAction> = phf_map! {
 };
 
 static VISUAL_KEYBINDINGS: phf::Map<&'static str, KeybindAction> = phf_map! {
-    "y" => KeybindAction::PerformEditorAction(EditorAction::Copy),
+    "y" => ea!(EditorAction::Copy),
+    "d" => ea!(EditorAction::Cut),
 };
