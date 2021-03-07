@@ -183,6 +183,15 @@ pub fn run(state: EditorStateRef) {
                                 let cursor = state.borrow().open_file.model.cursor;
                                 state.borrow_mut().open_file.selection = selection.with_end(cursor);
                             },
+                            crate::input::Mode::VisualLine => {
+                                let selection = state.borrow().open_file.selection;
+                                let cursor = state.borrow().open_file.model.cursor;
+                                let lines = state.borrow().open_file.model.lines.clone();
+                                let mut selection = selection.with_end(cursor);
+                                selection.first.column = 0;
+                                selection.last.column = lines.get(selection.last.row).map(|x| x.len()).unwrap_or(0);
+                                state.borrow_mut().open_file.selection = selection;
+                            },
                             _ => (),
                         }
                     } else if modifiers == ModifiersState::CTRL {
@@ -277,6 +286,8 @@ fn render(
     let bg_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.2, 0.2, 1.0), None);
     let selection_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.22, 0.3, 1.0), None);
     let linenr_paint = skia::Paint::new(skia::Color4f::new(0.6, 0.6, 0.6, 1.0), None);
+    let mut cursor_paint = skia::Paint::new(skia::Color4f::new(1.0, 1.0, 1.0, 1.0), None);
+    cursor_paint.set_style(skia::paint::Style::Stroke);
     // canvas.draw_rect(&rect, &paint);
     // let (_line_spacing, metrics) = font.metrics();
     let (_, rect) = font.measure_str("Xg", Some(&paint));
@@ -332,7 +343,7 @@ fn render(
                     y,
                     if input.mode == crate::input::Mode::Normal { x_width } else { 1. },
                     line_height);
-            canvas.draw_rect(&rect, &paint);
+            canvas.draw_rect(&rect, &cursor_paint);
         }
 
         y += line_height;
