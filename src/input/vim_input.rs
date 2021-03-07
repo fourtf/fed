@@ -63,7 +63,7 @@ enum KeybindAction {
     EnterVisualMode,
 }
 
-pub type KeybindActions = SmallVec<[KeybindAction; 4]>;
+type KeybindActions = SmallVec<[KeybindAction; 4]>;
 
 impl VimInput {
     pub fn new() -> Self {
@@ -113,7 +113,7 @@ impl VimInput {
         }
     }
 
-    pub fn perform_actions(&mut self, actions: &KeybindActions) -> EditorActions {
+    fn perform_actions(&mut self, actions: &KeybindActions) -> EditorActions {
         use KeybindAction::*;
 
         actions.iter().map(|action|
@@ -131,10 +131,6 @@ impl VimInput {
         ).flatten().collect()
     }
 }
-
-//macro_rules! ea {
-//   ($x:expr) => (KeybindAction::PerformEditorActions($x))
-//}
 
 macro_rules! map(
     { $($key:expr => $value:expr),+ } => {

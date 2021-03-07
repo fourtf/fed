@@ -28,7 +28,7 @@ fn main() {
 
     let doc = model::TextModel::new();
     let doc = match doc.load_from(&path) {
-        Err(e) => { println!("Error loading file"); doc },
+        Err(e) => { println!("Error loading file: {}", e); doc },
         Ok(doc) => doc,
     };
 
