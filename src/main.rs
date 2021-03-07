@@ -20,10 +20,9 @@ fn main() {
 
     // open main.rs by default for development
     let path = opts.file.unwrap_or_else(|| {
-        let mut path = std::env::current_dir().unwrap();
-        path.push("src");
-        path.push("main.rs");
-        path
+        println!("Usage: fed <file>");
+        std::process::exit(1);
+        Default::default()
     });
 
     let doc = model::TextModel::new();
