@@ -5,6 +5,7 @@ use skia_safe as skia;
 use clipboard::{ClipboardProvider, ClipboardContext};
 use super::editor::Editor;
 use super::Widget;
+use std::time::Instant;
 
 // ![allow(dead_code)]
 // cargo 1.45.1 / rustfmt 1.4.17-stable fails to process the relative path on Windows.
@@ -121,13 +122,24 @@ pub fn run(state: EditorStateRef) {
 
         let map_text_model = |f: &dyn Fn(TextModel) -> TextModel| {
             let new = state.borrow().open_file.model.clone();
+
+            // map
             let new = f(new);
             let mut b = state.borrow_mut();
             b.open_file.model = new.clone();
+
+            // undo
+            if b.open_file.last_edit_time.map(|x| x.elapsed().as_secs() < 1).unwrap_or(false) {
+                b.open_file.undo_stack.pop_front();
+            }
             b.open_file.undo_stack.push_front(new);
+
             if b.open_file.undo_stack.len() > 100 {
                 b.open_file.undo_stack.pop_back();
             }
+            b.open_file.redo_stack.clear();
+
+            b.open_file.last_edit_time = Some(Instant::now());
         };
 
         #[allow(deprecated)]
@@ -239,6 +251,28 @@ pub fn run(state: EditorStateRef) {
                                     Location::Offset(delta) => map_text_model(&|x| x.move_cursor(delta)),
                                 }
                             },
+                            Undo => {
+                                let old_model = state.borrow().open_file.model.clone();
+                                let mut s = state.borrow_mut();
+                                match s.open_file.undo_stack.pop_front() {
+                                    Some(model) => {
+                                        s.open_file.redo_stack.push_front(old_model);
+                                        s.open_file.model = model;
+                                    },
+                                    None => (),
+                                }
+                            },
+                            Redo => {
+                                let old_model = state.borrow().open_file.model.clone();
+                                let mut s = state.borrow_mut();
+                                match s.open_file.redo_stack.pop_front() {
+                                    Some(model) => {
+                                        s.open_file.undo_stack.push_front(old_model);
+                                        s.open_file.model = model;
+                                    },
+                                    None => (),
+                                }
+                            }
                             //_ => (),
                         };
                     }

@@ -5,13 +5,16 @@ use std::io::prelude::*;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::collections::VecDeque;
+use std::time::Instant;
 
 #[derive(Default)]
 pub struct OpenFile {
     pub model: TextModel,
     pub undo_stack: VecDeque<TextModel>,
+    pub redo_stack: VecDeque<TextModel>,
     pub path: PathBuf,
     pub selection: Selection,
+    pub last_edit_time: Option<Instant>,
 }
 
 impl OpenFile {

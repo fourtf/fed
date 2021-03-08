@@ -34,6 +34,8 @@ pub enum EditorAction {
     BeginSelection,
     EndSelection,
     GoTo(Location),
+    Undo,
+    Redo,
 }
 
 impl EditorAction {
@@ -154,7 +156,9 @@ static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::n
         "G" => E::GoTo(Location::LastLine).ks(),
         "v" => smallvec![ K::EnterMode(Mode::Visual), E::BeginSelection.k() ],
         "V" => smallvec![ K::EnterMode(Mode::VisualLine), E::BeginSelection.k() ],
-        "p" => E::Paste.ks()
+        "p" => E::Paste.ks(),
+        "u" => E::Undo.ks(),
+        "U" => E::Redo.ks()
     });
 
 static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{
