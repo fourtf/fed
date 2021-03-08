@@ -163,5 +163,6 @@ static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::n
 
 static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{
         "y" => smallvec![ E::Copy.k(), E::EndSelection.k() ],
-        "d" => smallvec![ E::Copy.k(), E::Cut.k(), E::EndSelection.k() ]
+        "d" => smallvec![ E::Copy.k(), E::Cut.k(), E::EndSelection.k() ],
+        "c" => smallvec![ E::Copy.k(), E::Cut.k(), E::EndSelection.k(), K::EnterMode(Mode::Insert) ]
     });

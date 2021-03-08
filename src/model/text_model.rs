@@ -236,17 +236,17 @@ impl TextModel {
 
         let cursor = if self.cursor.column == 0 {
             let removed = lines.remove(self.cursor.row);
+            let mut new_col = 0;
 
             match lines.get_mut(self.cursor.row - 1) {
                 Some(line) => {
+                    new_col = line.len();
                     line.push_str(removed.as_str());
                 }
                 _ => (),
             }
 
-            self.cursor
-                .offset((-1, 0))
-                .with_column(lines.get(self.cursor.row - 1).map(|x| x.len()).unwrap_or(0))
+            self.cursor.offset((-1, 0)).with_column(new_col)
         } else {
             match lines.get_mut(self.cursor.row) {
                 Some(line) => {
@@ -299,11 +299,8 @@ impl TextModel {
         let mut lines = self.lines.clone();
 
         let post = lines.slice((selection.last.row + 1)..);
-        let pre = //if selection.first.row == 0 {
-                     //    im::Vector::<String>::new()
-                     //} else {
-                         lines.slice(..selection.first.row);
-                     //}
+        let pre = lines.slice(..selection.first.row);
+
         let inbetween = lines;
         let inbetween = im::Vector::<String>::unit(
                 inbetween.front().map(|x| x[..selection.first.column].to_string()).unwrap_or_default() +
