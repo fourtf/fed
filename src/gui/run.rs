@@ -30,7 +30,7 @@ pub fn run(state: EditorStateRef) {
     use skia_safe::{Color, ColorType, Surface};
     use std::convert::TryInto;
 
-    use glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+    use glutin::event::{Event, WindowEvent};
     use glutin::event_loop::{ControlFlow, EventLoop};
     use glutin::window::WindowBuilder;
     use glutin::GlProfile;

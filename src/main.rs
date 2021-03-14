@@ -23,7 +23,6 @@ fn main() {
     let path = opts.file.unwrap_or_else(|| {
         println!("Usage: fed <file>");
         std::process::exit(1);
-        Default::default()
     });
 
     let doc = model::TextModel::new();

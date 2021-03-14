@@ -3,7 +3,7 @@ use crate::input::{Location};
 use crate::model::EditorStateRef;
 use crate::model::{Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
-use glutin::event::{ElementState, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
+use glutin::event::{ModifiersState, VirtualKeyCode};
 use skia_safe as skia;
 
 use std::rc::Rc;
@@ -231,6 +231,7 @@ impl Widget for Editor {
                 Outcome::Handled
             }
 
+            #[allow(deprecated)]
             Event::KeyboardInput(glutin::event::KeyboardInput {
                 virtual_keycode,
                 modifiers,
@@ -291,7 +292,6 @@ impl Widget for Editor {
                     Outcome::Ignored
                 }
             }
-            _ => Outcome::Ignored,
         }
     }
 }

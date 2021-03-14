@@ -16,6 +16,7 @@ impl Container {
 }
 
 impl Container {
+    #[allow(deprecated)]
     fn handle_own_event(&mut self, event: &Event) -> Option<Outcome> {
         use glutin::event::{ModifiersState, VirtualKeyCode};
         // handle alt+arrows

@@ -63,6 +63,7 @@ impl Loc {
         self.min(&lc).clone()
     }
 
+    #[allow(unused)]
     pub fn with_row(&self, row: usize) -> Self {
         Self {
             column: self.column,
@@ -70,6 +71,7 @@ impl Loc {
         }
     }
 
+    #[allow(unused)]
     pub fn with_column(&self, column: usize) -> Self {
         Self {
             column,
@@ -335,6 +337,7 @@ impl TextModel {
     }
 
     #[must_use]
+    #[allow(unused)]
     pub fn map<F: FnOnce(&mut Self) -> ()>(&self, f: F) -> Self {
         let mut doc = self.clone();
         f(&mut doc);
