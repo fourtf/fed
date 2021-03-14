@@ -1,5 +1,7 @@
 // taken from https://github.com/tailwindlabs/tailwindcss/blob/master/colors.js
 
+#![allow(dead_code)]
+
 pub fn rose50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.99609375, 0.94140625, 0.9453125, 1.0)
 }
@@ -210,34 +212,34 @@ pub fn blue800() -> skia_safe::Color4f {
 pub fn blue900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.1171875, 0.2265625, 0.5390625, 1.0)
 }
-pub fn lightBlue50() -> skia_safe::Color4f {
+pub fn light_blue50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.9375, 0.97265625, 0.99609375, 1.0)
 }
-pub fn lightBlue100() -> skia_safe::Color4f {
+pub fn light_blue100() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.875, 0.9453125, 0.9921875, 1.0)
 }
-pub fn lightBlue200() -> skia_safe::Color4f {
+pub fn light_blue200() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.7265625, 0.8984375, 0.98828125, 1.0)
 }
-pub fn lightBlue300() -> skia_safe::Color4f {
+pub fn light_blue300() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.48828125, 0.82421875, 0.984375, 1.0)
 }
-pub fn lightBlue400() -> skia_safe::Color4f {
+pub fn light_blue400() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.21875, 0.73828125, 0.96875, 1.0)
 }
-pub fn lightBlue500() -> skia_safe::Color4f {
+pub fn light_blue500() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.0546875, 0.64453125, 0.91015625, 1.0)
 }
-pub fn lightBlue600() -> skia_safe::Color4f {
+pub fn light_blue600() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.0078125, 0.515625, 0.77734375, 1.0)
 }
-pub fn lightBlue700() -> skia_safe::Color4f {
+pub fn light_blue700() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.01171875, 0.41015625, 0.62890625, 1.0)
 }
-pub fn lightBlue800() -> skia_safe::Color4f {
+pub fn light_blue800() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.02734375, 0.34765625, 0.51953125, 1.0)
 }
-pub fn lightBlue900() -> skia_safe::Color4f {
+pub fn light_blue900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.046875, 0.2890625, 0.4296875, 1.0)
 }
 pub fn cyan50() -> skia_safe::Color4f {
@@ -510,64 +512,64 @@ pub fn red800() -> skia_safe::Color4f {
 pub fn red900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.49609375, 0.11328125, 0.11328125, 1.0)
 }
-pub fn warmGray50() -> skia_safe::Color4f {
+pub fn warm_gray50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.9765625, 0.9765625, 0.97265625, 1.0)
 }
-pub fn warmGray100() -> skia_safe::Color4f {
+pub fn warm_gray100() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.95703125, 0.95703125, 0.953125, 1.0)
 }
-pub fn warmGray200() -> skia_safe::Color4f {
+pub fn warm_gray200() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.90234375, 0.89453125, 0.890625, 1.0)
 }
-pub fn warmGray300() -> skia_safe::Color4f {
+pub fn warm_gray300() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.8359375, 0.82421875, 0.81640625, 1.0)
 }
-pub fn warmGray400() -> skia_safe::Color4f {
+pub fn warm_gray400() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.65625, 0.6328125, 0.6171875, 1.0)
 }
-pub fn warmGray500() -> skia_safe::Color4f {
+pub fn warm_gray500() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.46875, 0.44140625, 0.421875, 1.0)
 }
-pub fn warmGray600() -> skia_safe::Color4f {
+pub fn warm_gray600() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.33984375, 0.32421875, 0.3046875, 1.0)
 }
-pub fn warmGray700() -> skia_safe::Color4f {
+pub fn warm_gray700() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.265625, 0.25, 0.234375, 1.0)
 }
-pub fn warmGray800() -> skia_safe::Color4f {
+pub fn warm_gray800() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.16015625, 0.14453125, 0.140625, 1.0)
 }
-pub fn warmGray900() -> skia_safe::Color4f {
+pub fn warm_gray900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.109375, 0.09765625, 0.08984375, 1.0)
 }
-pub fn trueGray50() -> skia_safe::Color4f {
+pub fn true_gray50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.9765625, 0.9765625, 0.9765625, 1.0)
 }
-pub fn trueGray100() -> skia_safe::Color4f {
+pub fn true_gray100() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.95703125, 0.95703125, 0.95703125, 1.0)
 }
-pub fn trueGray200() -> skia_safe::Color4f {
+pub fn true_gray200() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.89453125, 0.89453125, 0.89453125, 1.0)
 }
-pub fn trueGray300() -> skia_safe::Color4f {
+pub fn true_gray300() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.828125, 0.828125, 0.828125, 1.0)
 }
-pub fn trueGray400() -> skia_safe::Color4f {
+pub fn true_gray400() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.63671875, 0.63671875, 0.63671875, 1.0)
 }
-pub fn trueGray500() -> skia_safe::Color4f {
+pub fn true_gray500() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.44921875, 0.44921875, 0.44921875, 1.0)
 }
-pub fn trueGray600() -> skia_safe::Color4f {
+pub fn true_gray600() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.3203125, 0.3203125, 0.3203125, 1.0)
 }
-pub fn trueGray700() -> skia_safe::Color4f {
+pub fn true_gray700() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.25, 0.25, 0.25, 1.0)
 }
-pub fn trueGray800() -> skia_safe::Color4f {
+pub fn true_gray800() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.1484375, 0.1484375, 0.1484375, 1.0)
 }
-pub fn trueGray900() -> skia_safe::Color4f {
+pub fn true_gray900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.08984375, 0.08984375, 0.08984375, 1.0)
 }
 pub fn gray50() -> skia_safe::Color4f {
@@ -600,63 +602,63 @@ pub fn gray800() -> skia_safe::Color4f {
 pub fn gray900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.09375, 0.09375, 0.10546875, 1.0)
 }
-pub fn coolGray50() -> skia_safe::Color4f {
+pub fn cool_gray50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.97265625, 0.9765625, 0.98046875, 1.0)
 }
-pub fn coolGray100() -> skia_safe::Color4f {
+pub fn cool_gray100() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.94921875, 0.953125, 0.9609375, 1.0)
 }
-pub fn coolGray200() -> skia_safe::Color4f {
+pub fn cool_gray200() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.89453125, 0.90234375, 0.91796875, 1.0)
 }
-pub fn coolGray300() -> skia_safe::Color4f {
+pub fn cool_gray300() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.81640625, 0.83203125, 0.85546875, 1.0)
 }
-pub fn coolGray400() -> skia_safe::Color4f {
+pub fn cool_gray400() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.609375, 0.63671875, 0.68359375, 1.0)
 }
-pub fn coolGray500() -> skia_safe::Color4f {
+pub fn cool_gray500() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.41796875, 0.4453125, 0.5, 1.0)
 }
-pub fn coolGray600() -> skia_safe::Color4f {
+pub fn cool_gray600() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.29296875, 0.33203125, 0.38671875, 1.0)
 }
-pub fn coolGray700() -> skia_safe::Color4f {
+pub fn cool_gray700() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.21484375, 0.25390625, 0.31640625, 1.0)
 }
-pub fn coolGray800() -> skia_safe::Color4f {
+pub fn cool_gray800() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.12109375, 0.16015625, 0.21484375, 1.0)
 }
-pub fn coolGray900() -> skia_safe::Color4f {
+pub fn cool_gray900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.06640625, 0.09375, 0.15234375, 1.0)
 }
-pub fn blueGray50() -> skia_safe::Color4f {
+pub fn blue_gray50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.96875, 0.9765625, 0.984375, 1.0)
 }
-pub fn blueGray100() -> skia_safe::Color4f {
+pub fn blue_gray100() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.94140625, 0.95703125, 0.97265625, 1.0)
 }
-pub fn blueGray200() -> skia_safe::Color4f {
+pub fn blue_gray200() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.8828125, 0.90625, 0.9375, 1.0)
 }
-pub fn blueGray300() -> skia_safe::Color4f {
+pub fn blue_gray300() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.79296875, 0.83203125, 0.87890625, 1.0)
 }
-pub fn blueGray400() -> skia_safe::Color4f {
+pub fn blue_gray400() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.578125, 0.63671875, 0.71875, 1.0)
 }
-pub fn blueGray500() -> skia_safe::Color4f {
+pub fn blue_gray500() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.390625, 0.453125, 0.54296875, 1.0)
 }
-pub fn blueGray600() -> skia_safe::Color4f {
+pub fn blue_gray600() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.27734375, 0.33203125, 0.41015625, 1.0)
 }
-pub fn blueGray700() -> skia_safe::Color4f {
+pub fn blue_gray700() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.19921875, 0.25390625, 0.33203125, 1.0)
 }
-pub fn blueGray800() -> skia_safe::Color4f {
+pub fn blue_gray800() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.1171875, 0.16015625, 0.23046875, 1.0)
 }
-pub fn blueGray900() -> skia_safe::Color4f {
+pub fn blue_gray900() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.05859375, 0.08984375, 0.1640625, 1.0)
 }

@@ -15,11 +15,11 @@ impl Shrink1 for Rect {
 
 
 pub trait DefaultWidgetDraw {
-    fn defaultWidgetDraw(&mut self, bounds: &Rect, info: DrawInfo);
+    fn default_widget_draw(&mut self, bounds: &Rect, info: DrawInfo);
 }
 
 impl DefaultWidgetDraw for Canvas {
-    fn defaultWidgetDraw(&mut self, bounds: &Rect, info: DrawInfo) {
+    fn default_widget_draw(&mut self, bounds: &Rect, info: DrawInfo) {
         if info.is_focused {
             let mut paint = Paint::new(colors::blue400(), None);
             paint.set_style(skia::paint::Style::Stroke);
