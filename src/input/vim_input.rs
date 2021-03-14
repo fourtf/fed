@@ -158,7 +158,10 @@ static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::n
         "V" => smallvec![ K::EnterMode(Mode::VisualLine), E::BeginSelection.k() ],
         "p" => E::Paste.ks(),
         "u" => E::Undo.ks(),
-        "U" => E::Redo.ks()
+        "U" => E::Redo.ks(),
+        "O" => smallvec![ E::GoTo(Location::StartOfLine).k(), E::InsertNewline.k(),
+                    E::GoTo(Location::Offset((-1, 0).into())).k(), K::EnterMode(Mode::Insert) ],
+        "o" => smallvec![ E::GoTo(Location::EndOfLine).k(), E::InsertNewline.k(), K::EnterMode(Mode::Insert) ]
     });
 
 static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{

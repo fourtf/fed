@@ -9,6 +9,7 @@ use std::path::PathBuf;
 mod gui;
 mod model;
 mod input;
+//mod syntax;
 
 #[derive(Clap)]
 struct Opts {
@@ -37,6 +38,7 @@ fn main() {
             path,
             ..Default::default()
         },
+        input: crate::input::VimInput::new(),
     });
 
     gui::run(state);

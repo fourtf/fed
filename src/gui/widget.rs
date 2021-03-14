@@ -3,6 +3,12 @@ use skia_safe as skia;
 #[derive(Debug)]
 pub enum Event {
     Input(char),
+    KeyboardInput(glutin::event::KeyboardInput),
+}
+
+pub enum Outcome {
+    Handled,
+    Ignored,
 }
 
 pub trait Widget {
@@ -13,7 +19,7 @@ pub trait Widget {
         canvas.draw_rect(bounds, &paint);
     }
 
-    fn handle_event(&mut self, event: &Event) {
-        println!("draw {:?}", event);
+    fn handle_event(&mut self, event: &Event) -> Outcome {
+        Outcome::Ignored
     }
 }
