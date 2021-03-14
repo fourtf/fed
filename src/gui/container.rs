@@ -1,4 +1,4 @@
-use super::widget::{Event, Outcome, Widget};
+use super::widget::{Event, Outcome, Widget, DrawInfo};
 use skia_safe as skia;
 
 pub struct Container {
@@ -66,7 +66,7 @@ impl Container {
 }
 
 impl Widget for Container {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect) {
+    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let element_width = bounds.width() as f32 / self.items.len().max(1) as f32;
         let mut x = bounds.x();
 
@@ -74,6 +74,7 @@ impl Widget for Container {
             item.draw(
                 canvas,
                 &skia::Rect::from_xywh(x, bounds.y(), element_width, bounds.height()),
+                info
             );
 
             x += element_width;

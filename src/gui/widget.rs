@@ -11,13 +11,13 @@ pub enum Outcome {
     Ignored,
 }
 
-pub trait Widget {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect) {
-        let mut paint = skia::Paint::new(skia::Color4f::new(1.0, 0.0, 0.0, 1.0), None);
-        paint.set_style(skia::paint::Style::Stroke);
+#[derive(Debug, Clone, Copy)]
+pub struct DrawInfo {
+    pub is_focused: bool
+}
 
-        canvas.draw_rect(bounds, &paint);
-    }
+pub trait Widget {
+    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {}
 
     fn handle_event(&mut self, event: &Event) -> Outcome {
         Outcome::Ignored

@@ -1,4 +1,4 @@
-use super::widget::{Event, Widget, Outcome};
+use super::widget::{Event, Widget, Outcome, DrawInfo};
 use crate::input::{Location, VimInput};
 use crate::model::EditorStateRef;
 use crate::model::{Selection, TextModel};
@@ -15,7 +15,7 @@ pub struct Editor {
 }
 
 impl Widget for Editor {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect) {
+    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let state = self.state.borrow_mut();
 
         let font = &*self.font;

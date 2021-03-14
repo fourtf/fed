@@ -1,10 +1,10 @@
-use crate::model::{EditorStateRef, TextModel, Selection};
-use crate::input::{VimInput, Location};
+use super::container::Container;
+use super::editor::Editor;
+use super::{Widget, DrawInfo};
+use crate::input::{Location, VimInput};
+use crate::model::{EditorStateRef, Selection, TextModel};
 use glutin::event::ModifiersState;
 use skia_safe as skia;
-use super::editor::Editor;
-use super::Widget;
-use super::container::Container;
 use std::rc::Rc;
 
 // ![allow(dead_code)]
@@ -116,12 +116,9 @@ pub fn run(state: EditorStateRef) {
     let font = Rc::new(skia::Font::new(tf, Some(20.)));
 
     let mut root_widget = Container::make_row(crate::collection_items![
-        Box::new(super::rect::Rect{}),
-        Box::new(Editor {
-                state,
-                font,
-            })
-        ]);
+        Box::new(super::rect::Rect {}),
+        Box::new(Editor { state, font })
+    ]);
 
     el.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -138,10 +135,7 @@ pub fn run(state: EditorStateRef) {
                     windowed_context.resize(physical_size)
                 }
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                WindowEvent::KeyboardInput {
-                    input,
-                    ..
-                } => {
+                WindowEvent::KeyboardInput { input, .. } => {
                     if input.state == glutin::event::ElementState::Pressed {
                         root_widget.handle_event(&crate::gui::Event::KeyboardInput(input));
                     }
@@ -164,10 +158,13 @@ pub fn run(state: EditorStateRef) {
                     canvas.reset_matrix();
                     canvas.scale((sf, sf));
 
-                    let size = windowed_context.window().inner_size().to_logical(windowed_context.window().scale_factor());
+                    let size = windowed_context
+                        .window()
+                        .inner_size()
+                        .to_logical(windowed_context.window().scale_factor());
                     let rect = skia::Rect::from_xywh(0., 0., size.width, size.height);
-                    
-                    root_widget.draw(canvas, &rect);
+
+                    root_widget.draw(canvas, &rect, DrawInfo { is_focused: true });
                 }
                 surface.canvas().flush();
                 windowed_context.swap_buffers().unwrap();
@@ -176,4 +173,3 @@ pub fn run(state: EditorStateRef) {
         }
     });
 }
-
