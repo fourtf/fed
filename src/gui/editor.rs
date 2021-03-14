@@ -1,11 +1,11 @@
 use super::widget::{Event, Widget, Outcome, DrawInfo};
-use crate::input::{Location, VimInput};
+use crate::input::{Location};
 use crate::model::EditorStateRef;
 use crate::model::{Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::{ElementState, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 use skia_safe as skia;
-use std::convert::TryInto;
+
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -15,7 +15,7 @@ pub struct Editor {
 }
 
 impl Widget for Editor {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
+    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, _info: DrawInfo) {
         let state = self.state.borrow_mut();
 
         let font = &*self.font;
@@ -122,7 +122,7 @@ impl Widget for Editor {
 
     fn handle_event(&mut self, event: &Event) -> Outcome {
         use crate::input::EditorAction::*;
-        let mut state = &self.state;
+        let state = &self.state;
 
         let map_text_model = |f: &dyn Fn(TextModel) -> TextModel| {
             let new = state.borrow().open_file.model.clone();

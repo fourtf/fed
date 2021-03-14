@@ -1,9 +1,9 @@
 use super::container::Container;
 use super::editor::Editor;
 use super::{Widget, DrawInfo};
-use crate::input::{Location, VimInput};
-use crate::model::{EditorStateRef, Selection, TextModel};
-use glutin::event::ModifiersState;
+
+use crate::model::{EditorStateRef};
+
 use skia_safe as skia;
 use std::rc::Rc;
 
@@ -151,7 +151,7 @@ pub fn run(state: EditorStateRef) {
             },
             Event::RedrawRequested(_) => {
                 {
-                    let mut canvas = surface.canvas();
+                    let canvas = surface.canvas();
                     canvas.clear(Color::DARK_GRAY);
 
                     let sf = windowed_context.window().scale_factor() as f32;
