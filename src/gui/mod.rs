@@ -4,6 +4,7 @@ mod widget;
 pub use widget::*;
 mod editor;
 mod container;
+mod files;
 mod rect;
 mod traits;
 pub use traits::*;

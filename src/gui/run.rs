@@ -1,6 +1,7 @@
 use super::container::Container;
 use super::editor::Editor;
 use super::{Widget, DrawInfo};
+use super::files::Files;
 
 use crate::model::{EditorStateRef};
 
@@ -115,8 +116,11 @@ pub fn run(state: EditorStateRef) {
     .unwrap();
     let font = Rc::new(skia::Font::new(tf, Some(20.)));
 
+    let files = Files::new(state.clone(), font.clone());
+    files.load_files(state.borrow().work_dir.clone());
+
     let mut root_widget = Container::make_row(crate::collection_items![
-        Box::new(super::rect::Rect {}),
+        Box::new(files),
         Box::new(Editor { state, font })
     ]);
 

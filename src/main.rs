@@ -25,19 +25,10 @@ fn main() {
         std::process::exit(1);
     });
 
-    let doc = model::TextModel::new();
-    let doc = match doc.load_from(&path) {
-        Err(e) => { println!("Error loading file: {}", e); doc },
-        Ok(doc) => doc,
-    };
-
     let state = make_ref(model::EditorState {
-        open_file: model::OpenFile {
-            model: doc,
-            path,
-            ..Default::default()
-        },
+        open_file: model::OpenFile::new(path.clone()),
         input: crate::input::VimInput::new(),
+        work_dir: path,
     });
 
     gui::run(state);

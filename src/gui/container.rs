@@ -45,7 +45,6 @@ impl Container {
             .min(self.items.len() as isize - 1) as usize;
         if old_index != new_index {
             self.selected_index = new_index;
-            println!("switch to item {}", new_index);
             Some(Outcome::Handled)
         } else {
             None
@@ -53,13 +52,7 @@ impl Container {
     }
 
     fn propagate_event(&mut self, event: &Event) -> Outcome {
-        let index = if self.selected_index > self.items.len() {
-            0
-        } else {
-            self.selected_index
-        };
-
-        match self.items.get_mut(index) {
+        match self.items.get_mut(self.selected_index) {
             Some(item) => item.handle_event(event),
             _ => Outcome::Ignored,
         }
@@ -71,11 +64,14 @@ impl Widget for Container {
         let element_width = bounds.width() as f32 / self.items.len().max(1) as f32;
         let mut x = bounds.x();
 
-        for item in &mut self.items {
+        for (i, item) in &mut self.items.iter_mut().enumerate() {
             item.draw(
                 canvas,
                 &skia::Rect::from_xywh(x, bounds.y(), element_width, bounds.height()),
-                info
+                DrawInfo {
+                    is_focused: info.is_focused && i == self.selected_index,
+                    ..info
+                }
             );
 
             x += element_width;

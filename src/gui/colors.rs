@@ -2,6 +2,12 @@
 
 #![allow(dead_code)]
 
+pub fn black() -> skia_safe::Color4f {
+    skia_safe::Color4f::new(0.0, 0.0, 0.0, 1.0)
+}
+pub fn white() -> skia_safe::Color4f {
+    skia_safe::Color4f::new(1.0, 1.0, 1.0, 1.0)
+}
 pub fn rose50() -> skia_safe::Color4f {
     skia_safe::Color4f::new(0.99609375, 0.94140625, 0.9453125, 1.0)
 }

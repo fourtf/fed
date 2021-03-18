@@ -23,8 +23,9 @@ impl DefaultWidgetDraw for Canvas {
         if info.is_focused {
             let mut paint = Paint::new(colors::blue400(), None);
             paint.set_style(skia::paint::Style::Stroke);
+            paint.set_stroke_width(2.0);
 
-            self.draw_rect(bounds, &paint);
+            self.draw_rect(&bounds.with_inset((1.0, 1.0)), &paint);
         }
     }
 }

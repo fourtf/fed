@@ -36,6 +36,7 @@ pub enum EditorAction {
     GoTo(Location),
     Undo,
     Redo,
+    FormatDocument,
 }
 
 impl EditorAction {
@@ -162,7 +163,9 @@ static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::n
         "U" => E::Redo.ks(),
         "O" => smallvec![ E::GoTo(Location::StartOfLine).k(), E::InsertNewline.k(),
                     E::GoTo(Location::Offset((-1, 0).into())).k(), K::EnterMode(Mode::Insert) ],
-        "o" => smallvec![ E::GoTo(Location::EndOfLine).k(), E::InsertNewline.k(), K::EnterMode(Mode::Insert) ]
+        "o" => smallvec![ E::GoTo(Location::EndOfLine).k(),
+                E::InsertNewline.k(), K::EnterMode(Mode::Insert) ],
+        "_" => E::FormatDocument.ks()
     });
 
 static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{

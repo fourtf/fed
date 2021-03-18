@@ -174,6 +174,20 @@ impl TextModel {
         })
     }
 
+    pub fn whole_selection(&self) -> Selection {
+        Selection::new(Loc::zero(), get_last_cursor(&self.lines))
+    }
+
+    pub fn with_content(&self, content: &str) -> Self {
+        Self {
+            lines: content
+                .lines()
+                .map(|x| x.to_owned())
+                .collect(),
+            ..self.clone()
+        }
+    }
+
     #[must_use]
     pub fn move_cursor<D: Into<LocDelta>>(&self, offset: D) -> Self {
         let offset = offset.into();
@@ -269,12 +283,6 @@ impl TextModel {
         }
     }
 
-    // pub fn delete_key(&self) -> Self {
-    //     Self {
-    //         ..self.clone()
-    //     }
-    // }
-
     pub fn insert_newline(&self) -> Self {
         let mut lines = self.lines.clone();
         let (a, b) = self
@@ -337,11 +345,8 @@ impl TextModel {
     }
 
     #[must_use]
-    #[allow(unused)]
-    pub fn map<F: FnOnce(&mut Self) -> ()>(&self, f: F) -> Self {
-        let mut doc = self.clone();
-        f(&mut doc);
-        doc
+    pub fn get_string_all(&self) -> String {
+        self.get_string(self.whole_selection())
     }
 }
 

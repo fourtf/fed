@@ -5,6 +5,7 @@ use crate::model::{Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::{ModifiersState, VirtualKeyCode};
 use skia_safe as skia;
+use super::traits::DefaultWidgetDraw;
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -15,7 +16,7 @@ pub struct Editor {
 }
 
 impl Widget for Editor {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, _info: DrawInfo) {
+    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let state = self.state.borrow_mut();
 
         let font = &*self.font;
@@ -118,6 +119,7 @@ impl Widget for Editor {
         );
 
         canvas.restore();
+        canvas.default_widget_draw(bounds, info);
     }
 
     fn handle_event(&mut self, event: &Event) -> Outcome {
@@ -225,6 +227,19 @@ impl Widget for Editor {
                                 None => (),
                             }
                         }
+                        FormatDocument => {
+                            map_text_model(
+                                &|x| {
+                                    match rust_fmt(&x.get_string_all()) {
+                                        Ok(text) => x.with_content(&*text),
+                                        Err(e) => {
+                                            eprintln!("error while formatting: {}", e);
+                                            x
+                                        }
+                                    }
+                                }
+                            )
+                        }
                     };
                 }
 
@@ -294,4 +309,23 @@ impl Widget for Editor {
             }
         }
     }
+}
+
+fn rust_fmt(s: &String) -> std::io::Result<String> {
+    use std::process::*;
+    use std::io::Write;
+
+    let mut child = Command::new("cat")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let child_stdin = child.stdin.as_mut().unwrap();
+    child_stdin.write_all(s.as_bytes())?;
+    // Close stdin to finish and avoid indefinite blocking
+    drop(child_stdin);
+    
+    let output = child.wait_with_output()?;
+
+    Ok(String::from_utf8_lossy(&*output.stdout).into())
 }
