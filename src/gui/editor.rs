@@ -1,11 +1,11 @@
-use super::widget::{Event, Widget, Outcome, DrawInfo};
-use crate::input::{Location};
+use super::traits::DefaultWidgetDraw;
+use super::widget::{DrawInfo, Event, Outcome, Widget};
+use crate::input::Location;
 use crate::model::EditorStateRef;
 use crate::model::{Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::{ModifiersState, VirtualKeyCode};
 use skia_safe as skia;
-use super::traits::DefaultWidgetDraw;
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -228,17 +228,16 @@ impl Widget for Editor {
                             }
                         }
                         FormatDocument => {
-                            map_text_model(
-                                &|x| {
-                                    match rust_fmt(&x.get_string_all()) {
-                                        Ok(text) => x.with_content(&*text),
-                                        Err(e) => {
-                                            eprintln!("error while formatting: {}", e);
-                                            x
-                                        }
-                                    }
+                            map_text_model(&|x| match rust_fmt(&x.get_string_all()) {
+                                Ok(text) => {
+                                    println!("Formatted");
+                                    x.with_content(&*text)
                                 }
-                            )
+                                Err(e) => {
+                                    eprintln!("error while formatting: {}", e);
+                                    x
+                                }
+                            })
                         }
                     };
                 }
@@ -312,19 +311,18 @@ impl Widget for Editor {
 }
 
 fn rust_fmt(s: &String) -> std::io::Result<String> {
-    use std::process::*;
     use std::io::Write;
+    use std::process::*;
 
-    let mut child = Command::new("cat")
+    let mut child = Command::new("rustfmt")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;
 
     let child_stdin = child.stdin.as_mut().unwrap();
     child_stdin.write_all(s.as_bytes())?;
-    // Close stdin to finish and avoid indefinite blocking
     drop(child_stdin);
-    
+
     let output = child.wait_with_output()?;
 
     Ok(String::from_utf8_lossy(&*output.stdout).into())

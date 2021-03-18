@@ -7,8 +7,8 @@ use clap::Clap;
 use std::path::PathBuf;
 
 mod gui;
-mod model;
 mod input;
+mod model;
 //mod syntax;
 
 #[derive(Clap)]

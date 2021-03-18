@@ -1,8 +1,8 @@
-use std::fmt;
 use crate::model::LocDelta;
-use smallvec::{SmallVec, smallvec};
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use smallvec::{smallvec, SmallVec};
+use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mode {
@@ -70,20 +70,16 @@ type KeybindActions = SmallVec<[KeybindAction; 4]>;
 
 impl VimInput {
     pub fn new() -> Self {
-        Self {
-            mode: Mode::Normal,
-        }
+        Self { mode: Mode::Normal }
     }
 
     pub fn receive_char(&mut self, c: char) -> EditorActions {
         use EditorAction::*;
 
         match &self.mode {
-            Mode::Normal => {
-                match NORMAL_KEYBINDINGS.get(c.to_string().as_str()) {
-                    Some(action) => self.perform_actions(action),
-                    None => Default::default(),
-                }
+            Mode::Normal => match NORMAL_KEYBINDINGS.get(c.to_string().as_str()) {
+                Some(action) => self.perform_actions(action),
+                None => Default::default(),
             },
             Mode::Insert => {
                 if c == '\r' {
@@ -104,30 +100,32 @@ impl VimInput {
                     self.mode = Mode::Normal;
                     return smallvec![EditorAction::EndSelection];
                 }
-                
+
                 return match VISUAL_KEYBINDINGS.get(c.to_string().as_str()) {
                     Some(actions) => {
                         self.mode = Mode::Normal;
                         self.perform_actions(actions)
-                    },
+                    }
                     None => smallvec![],
-                }
-            },
+                };
+            }
         }
     }
 
     fn perform_actions(&mut self, actions: &KeybindActions) -> EditorActions {
         use KeybindAction::*;
 
-        actions.iter().map(|action|
-            match action {
+        actions
+            .iter()
+            .map(|action| match action {
                 EnterMode(mode) => {
                     self.mode = *mode;
                     smallvec![]
-                },
+                }
                 PerformEditorActions(actions) => actions.clone(),
-            }
-        ).flatten().collect()
+            })
+            .flatten()
+            .collect()
     }
 }
 
@@ -146,7 +144,8 @@ macro_rules! map(
 use EditorAction as E;
 use KeybindAction as K;
 
-static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{
+static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| {
+    map! {
         "i" => smallvec![ K::EnterMode(Mode::Insert) ],
         "a" => smallvec![ E::GoTo(Location::Offset((0, 1).into())).k(), K::EnterMode(Mode::Insert) ],
         "$" => E::GoTo(Location::EndOfLine).ks(),
@@ -164,12 +163,15 @@ static NORMAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::n
         "O" => smallvec![ E::GoTo(Location::StartOfLine).k(), E::InsertNewline.k(),
                     E::GoTo(Location::Offset((-1, 0).into())).k(), K::EnterMode(Mode::Insert) ],
         "o" => smallvec![ E::GoTo(Location::EndOfLine).k(),
-                E::InsertNewline.k(), K::EnterMode(Mode::Insert) ],
+                    E::InsertNewline.k(), K::EnterMode(Mode::Insert) ],
         "_" => E::FormatDocument.ks()
-    });
+    }
+});
 
-static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| map!{
+static VISUAL_KEYBINDINGS: Lazy<HashMap<&'static str, KeybindActions>> = Lazy::new(|| {
+    map! {
         "y" => smallvec![ E::Copy.k(), E::EndSelection.k() ],
         "d" => smallvec![ E::Copy.k(), E::Cut.k(), E::EndSelection.k() ],
         "c" => smallvec![ E::Copy.k(), E::Cut.k(), E::EndSelection.k(), K::EnterMode(Mode::Insert) ]
-    });
+    }
+});
