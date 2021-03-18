@@ -18,6 +18,20 @@ pub struct OpenFile {
 }
 
 impl OpenFile {
+    pub fn new(path: PathBuf) -> Self {
+        let doc = TextModel::new();
+        let doc = match doc.load_from(&path) {
+            Err(e) => { println!("Error loading file: {}", e); doc },
+            Ok(doc) => doc,
+        };
+
+        Self {
+            model: doc,
+            path,
+            ..Default::default()
+        }
+    }
+
     pub fn save(&self) -> io::Result<()> {
         let file = File::create(&self.path)?;
         let mut file = BufWriter::new(file);

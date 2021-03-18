@@ -7,8 +7,9 @@ use clap::Clap;
 use std::path::PathBuf;
 
 mod gui;
-mod model;
 mod input;
+mod model;
+//mod syntax;
 
 #[derive(Clap)]
 struct Opts {
@@ -22,21 +23,12 @@ fn main() {
     let path = opts.file.unwrap_or_else(|| {
         println!("Usage: fed <file>");
         std::process::exit(1);
-        Default::default()
     });
 
-    let doc = model::TextModel::new();
-    let doc = match doc.load_from(&path) {
-        Err(e) => { println!("Error loading file: {}", e); doc },
-        Ok(doc) => doc,
-    };
-
     let state = make_ref(model::EditorState {
-        open_file: model::OpenFile {
-            model: doc,
-            path,
-            ..Default::default()
-        },
+        open_file: model::OpenFile::new(path.clone()),
+        input: crate::input::VimInput::new(),
+        work_dir: path,
     });
 
     gui::run(state);

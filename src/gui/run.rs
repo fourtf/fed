@@ -1,11 +1,12 @@
-use crate::model::{EditorStateRef, TextModel, Selection};
-use crate::input::{VimInput, Location};
-use glutin::event::ModifiersState;
-use skia_safe as skia;
-use clipboard::{ClipboardProvider, ClipboardContext};
+use super::container::Container;
 use super::editor::Editor;
-use super::Widget;
-use std::time::Instant;
+use super::{Widget, DrawInfo};
+use super::files::Files;
+
+use crate::model::{EditorStateRef};
+
+use skia_safe as skia;
+use std::rc::Rc;
 
 // ![allow(dead_code)]
 // cargo 1.45.1 / rustfmt 1.4.17-stable fails to process the relative path on Windows.
@@ -30,7 +31,7 @@ pub fn run(state: EditorStateRef) {
     use skia_safe::{Color, ColorType, Surface};
     use std::convert::TryInto;
 
-    use glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+    use glutin::event::{Event, WindowEvent};
     use glutin::event_loop::{ControlFlow, EventLoop};
     use glutin::window::WindowBuilder;
     use glutin::GlProfile;
@@ -113,34 +114,18 @@ pub fn run(state: EditorStateRef) {
         ),
     )
     .unwrap();
-    let font = skia::Font::new(tf, Some(20.));
+    let font = Rc::new(skia::Font::new(tf, Some(20.)));
 
-    let mut input = VimInput::new();
+    let files = Files::new(state.clone(), font.clone());
+    files.load_files(state.borrow().work_dir.clone());
+
+    let mut root_widget = Container::make_row(crate::collection_items![
+        Box::new(files),
+        Box::new(Editor { state, font })
+    ]);
 
     el.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
-
-        let map_text_model = |f: &dyn Fn(TextModel) -> TextModel| {
-            let new = state.borrow().open_file.model.clone();
-
-            // map
-            let new = f(new);
-            let mut b = state.borrow_mut();
-            b.open_file.model = new.clone();
-
-            // undo
-            if b.open_file.last_edit_time.map(|x| x.elapsed().as_secs() < 1).unwrap_or(false) {
-                b.open_file.undo_stack.pop_front();
-            }
-            b.open_file.undo_stack.push_front(new);
-
-            if b.open_file.undo_stack.len() > 100 {
-                b.open_file.undo_stack.pop_back();
-            }
-            b.open_file.redo_stack.clear();
-
-            b.open_file.last_edit_time = Some(Instant::now());
-        };
 
         #[allow(deprecated)]
         match event {
@@ -154,151 +139,36 @@ pub fn run(state: EditorStateRef) {
                     windowed_context.resize(physical_size)
                 }
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            virtual_keycode,
-                            modifiers,
-                            state: ElementState::Pressed,
-                            ..
-                        },
-                    ..
-                } => {
-                    if modifiers.logo() {
-                        if let Some(VirtualKeyCode::Q) = virtual_keycode {
-                            *control_flow = ControlFlow::Exit;
-                        }
-                    }
-
-                    if modifiers == ModifiersState::empty() {
-                        if Some(VirtualKeyCode::Up) == virtual_keycode {
-                            map_text_model(&|x| x.move_cursor((-1, 0)));
-                        } else if Some(VirtualKeyCode::Down) == virtual_keycode {
-                            map_text_model(&|x| x.move_cursor((1, 0)));
-                        } else if Some(VirtualKeyCode::Left) == virtual_keycode {
-                            map_text_model(&|x| x.move_cursor((0, -1)));
-                        } else if Some(VirtualKeyCode::Right) == virtual_keycode {
-                            map_text_model(&|x| x.move_cursor((0, 1)));
-                        } else if Some(VirtualKeyCode::Tab) == virtual_keycode {
-                            map_text_model(&|x| x.insert("    "));
-                        }
-
-                        match input.mode {
-                            crate::input::Mode::Visual => {
-                                let selection = state.borrow().open_file.selection;
-                                let cursor = state.borrow().open_file.model.cursor;
-                                state.borrow_mut().open_file.selection = selection.with_end(cursor);
-                            },
-                            crate::input::Mode::VisualLine => {
-                                let selection = state.borrow().open_file.selection;
-                                let cursor = state.borrow().open_file.model.cursor;
-                                let lines = state.borrow().open_file.model.lines.clone();
-                                let mut selection = selection.with_end(cursor);
-                                selection.first.column = 0;
-                                selection.last.column = lines.get(selection.last.row).map(|x| x.len()).unwrap_or(0);
-                                state.borrow_mut().open_file.selection = selection;
-                            },
-                            _ => (),
-                        }
-                    } else if modifiers == ModifiersState::CTRL {
-                        if Some(VirtualKeyCode::S) == virtual_keycode {
-                            match state.borrow().open_file.save() {
-                                Err(e) => println!("Error while saving: {}", e),
-                                _ => println!("Saved successfully"),
-                            }
-                        }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.state == glutin::event::ElementState::Pressed {
+                        root_widget.handle_event(&crate::gui::Event::KeyboardInput(input));
                     }
 
                     windowed_context.window().request_redraw();
                 }
                 WindowEvent::ReceivedCharacter(c) => {
-                    use crate::input::EditorAction::*;
+                    root_widget.handle_event(&crate::gui::Event::Input(c));
 
-                    for action in input.receive_char(c) {
-                        match action {
-                            InsertString(str) => map_text_model(&|x| x.insert(str.as_str())),
-                            InsertNewline => map_text_model(&|x| x.insert_newline()),
-                            DeleteLeft => map_text_model(&|x| x.backspace_key()),
-                            Copy => {
-                                let s = state.borrow().open_file.model.get_string(state.borrow().open_file.selection);
-    
-                                // TODO: make safe
-                                let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                                ctx.set_contents(s).unwrap();
-                            },
-                            Paste => {
-                                let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                                // TODO: make safe
-                                let s = ctx.get_contents().unwrap_or(String::new());
-                                map_text_model(&|x| x.insert(&*s));
-                            },
-                            Cut => {
-                                let selection = state.borrow().open_file.selection;
-                                state.borrow_mut().open_file.selection = Selection::empty();
-                                map_text_model(&|x| x.delete(selection));
-                            },
-                            BeginSelection => {
-                                let cursor = state.borrow().open_file.model.cursor;
-                                state.borrow_mut().open_file.selection = crate::model::Selection::new(cursor, cursor);
-                            },
-                            EndSelection => { state.borrow_mut().open_file.selection = Selection::empty(); },
-                            GoTo(loc) => {
-                                match loc {
-                                    Location::EndOfLine => map_text_model(&|x| x.move_cursor((0, 1000000000))),
-                                    Location::StartOfLine => map_text_model(&|x| x.move_cursor((0, -1000000000))),
-                                    Location::FirstLine => map_text_model(&|x| x.move_cursor((-1000000000, 0))),
-                                    Location::LastLine => map_text_model(&|x| x.move_cursor((1000000000, 0))),
-                                    Location::Offset(delta) => map_text_model(&|x| x.move_cursor(delta)),
-                                }
-                            },
-                            Undo => {
-                                let old_model = state.borrow().open_file.model.clone();
-                                let mut s = state.borrow_mut();
-                                match s.open_file.undo_stack.pop_front() {
-                                    Some(model) => {
-                                        s.open_file.redo_stack.push_front(old_model);
-                                        s.open_file.model = model;
-                                    },
-                                    None => (),
-                                }
-                            },
-                            Redo => {
-                                let old_model = state.borrow().open_file.model.clone();
-                                let mut s = state.borrow_mut();
-                                match s.open_file.redo_stack.pop_front() {
-                                    Some(model) => {
-                                        s.open_file.undo_stack.push_front(old_model);
-                                        s.open_file.model = model;
-                                    },
-                                    None => (),
-                                }
-                            }
-                            //_ => (),
-                        };
-                    }
+                    windowed_context.window().request_redraw();
                 }
                 _ => (),
             },
             Event::RedrawRequested(_) => {
                 {
-                    let mut canvas = surface.canvas();
+                    let canvas = surface.canvas();
                     canvas.clear(Color::DARK_GRAY);
 
                     let sf = windowed_context.window().scale_factor() as f32;
                     canvas.reset_matrix();
                     canvas.scale((sf, sf));
 
-                    let mut editor = Editor {
-                        model: &state.borrow().open_file.model,
-                        selection: &state.borrow().open_file.selection,
-                        font: &font,
-                        input: &input,
-                    };
-
-                    let size = windowed_context.window().inner_size().to_logical(windowed_context.window().scale_factor());
+                    let size = windowed_context
+                        .window()
+                        .inner_size()
+                        .to_logical(windowed_context.window().scale_factor());
                     let rect = skia::Rect::from_xywh(0., 0., size.width, size.height);
-                    
-                    editor.draw(canvas, &rect);
+
+                    root_widget.draw(canvas, &rect, DrawInfo { is_focused: true });
                 }
                 surface.canvas().flush();
                 windowed_context.swap_buffers().unwrap();
@@ -307,4 +177,3 @@ pub fn run(state: EditorStateRef) {
         }
     });
 }
-
