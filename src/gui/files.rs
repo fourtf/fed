@@ -46,6 +46,7 @@ pub struct Files {
     data: Arc<Mutex<Data>>,
     font: Rc<skia::Font>,
     editor_state: EditorStateRef,
+    last_path: Option<PathBuf>,
 }
 
 impl Files {
@@ -54,12 +55,14 @@ impl Files {
             data: Default::default(),
             editor_state,
             font,
+            last_path: None,
         }
     }
 
-    pub fn load_files(&self, path: PathBuf) {
+    pub fn load_files(&mut self, path: PathBuf) {
         self.data.lock().unwrap().is_loading = true;
         let data = self.data.clone();
+        self.last_path = Some(path.clone());
 
         thread::spawn(move || {
             let files = read_files(path, 10);
@@ -68,6 +71,13 @@ impl Files {
             d.root = Some(File::directory(".".into(), ".".into(), files));
             d.is_loading = false;
         });
+    }
+
+    pub fn reload_files(&mut self) {
+        match self.last_path.clone() {
+            Some(path) => self.load_files(path),
+            _ => eprintln!("Can't reload because path was never set"),
+        }
     }
 }
 
@@ -170,6 +180,10 @@ impl Widget for Files {
                         Some(path) => self.editor_state.borrow_mut().open_file = OpenFile::new(path),
                         None => eprintln!("nothing selected"),
                     }
+
+                    Outcome::Handled
+                } else if input.virtual_keycode == Some(VirtualKeyCode::F5) {
+                    self.reload_files();
 
                     Outcome::Handled
                 } else {
