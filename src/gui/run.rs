@@ -1,9 +1,9 @@
 use super::container::Container;
 use super::editor::Editor;
-use super::{Widget, DrawInfo};
 use super::files::Files;
+use super::{DrawInfo, Widget};
 
-use crate::model::{EditorStateRef};
+use crate::model::EditorStateRef;
 
 use skia_safe as skia;
 use std::rc::Rc;

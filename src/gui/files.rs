@@ -1,14 +1,13 @@
-use super::{colors, DrawInfo, Event, Widget, Outcome};
+use super::{colors, DrawInfo, Event, Outcome, Widget};
 use crate::gui::traits::DefaultWidgetDraw;
 use crate::model::{EditorStateRef, OpenFile};
+use glutin::event::VirtualKeyCode;
 use skia_safe as skia;
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use glutin::event::VirtualKeyCode;
-
 
 #[derive(Debug)]
 struct File {
@@ -31,7 +30,11 @@ impl File {
     }
 
     fn directory(name: String, path: PathBuf, children: Vec<File>) -> File {
-        File { name, path, children }
+        File {
+            name,
+            path,
+            children,
+        }
     }
 }
 
@@ -106,7 +109,11 @@ fn read_files(path: PathBuf, depth_left: usize) -> Vec<File> {
                         let file = match entry.metadata() {
                             Ok(md) => {
                                 if md.is_dir() {
-                                    File::directory(name, entry.path(), read_files(entry.path(), depth_left - 1))
+                                    File::directory(
+                                        name,
+                                        entry.path(),
+                                        read_files(entry.path(), depth_left - 1),
+                                    )
                                 } else {
                                     File::file(name, entry.path())
                                 }
@@ -174,10 +181,15 @@ impl Widget for Files {
                     Outcome::Handled
                 } else if input.virtual_keycode == Some(VirtualKeyCode::Return) {
                     let data = self.data.lock().unwrap();
-                    let path = data.root.as_ref().and_then(|f| find_path_at_index(f, data.selected_index));
+                    let path = data
+                        .root
+                        .as_ref()
+                        .and_then(|f| find_path_at_index(f, data.selected_index));
 
                     match path {
-                        Some(path) => self.editor_state.borrow_mut().open_file = OpenFile::new(path),
+                        Some(path) => {
+                            self.editor_state.borrow_mut().open_file = OpenFile::new(path)
+                        }
                         None => eprintln!("nothing selected"),
                     }
 
@@ -189,8 +201,8 @@ impl Widget for Files {
                 } else {
                     Outcome::Ignored
                 }
-            },
-            _ => Outcome::Ignored
+            }
+            _ => Outcome::Ignored,
         }
     }
 }
@@ -222,7 +234,6 @@ fn draw_file(
     }
 }
 
-
 fn find_path_at_index(file: &File, index: usize) -> Option<PathBuf> {
     let mut res = None;
     let mut current_index = 0;
@@ -232,7 +243,12 @@ fn find_path_at_index(file: &File, index: usize) -> Option<PathBuf> {
     res
 }
 
-fn find_path_at_index_rec(file: &File, index: usize, current_index: &mut usize, res: &mut Option<PathBuf>) {
+fn find_path_at_index_rec(
+    file: &File,
+    index: usize,
+    current_index: &mut usize,
+    res: &mut Option<PathBuf>,
+) {
     if index == *current_index {
         *res = Some(file.path.clone());
     }

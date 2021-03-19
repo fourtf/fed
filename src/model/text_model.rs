@@ -180,10 +180,7 @@ impl TextModel {
 
     pub fn with_content(&self, content: &str) -> Self {
         Self {
-            lines: content
-                .lines()
-                .map(|x| x.to_owned())
-                .collect(),
+            lines: content.lines().map(|x| x.to_owned()).collect(),
             ..self.clone()
         }
     }
@@ -194,12 +191,20 @@ impl TextModel {
 
         Self {
             cursor: if offset.column == 0 {
-                self.original_cursor.unwrap_or(self.cursor).offset(offset).constrain(&self.lines)
+                self.original_cursor
+                    .unwrap_or(self.cursor)
+                    .offset(offset)
+                    .constrain(&self.lines)
             } else {
                 self.cursor.offset(offset).constrain(&self.lines)
             },
             original_cursor: if offset.column == 0 {
-                Some(self.original_cursor.unwrap_or(self.cursor).offset(offset).constrain_only_row(&self.lines))
+                Some(
+                    self.original_cursor
+                        .unwrap_or(self.cursor)
+                        .offset(offset)
+                        .constrain_only_row(&self.lines),
+                )
             } else {
                 None
             },
@@ -313,9 +318,15 @@ impl TextModel {
 
         let inbetween = lines;
         let inbetween = im::Vector::<String>::unit(
-                inbetween.front().map(|x| x[..selection.first.column].to_string()).unwrap_or_default() +
-                inbetween.back().map(|x| &x[selection.last.column..]).unwrap_or("")
-            );
+            inbetween
+                .front()
+                .map(|x| x[..selection.first.column].to_string())
+                .unwrap_or_default()
+                + inbetween
+                    .back()
+                    .map(|x| &x[selection.last.column..])
+                    .unwrap_or(""),
+        );
 
         Self {
             lines: pre + inbetween + post,
@@ -331,12 +342,20 @@ impl TextModel {
         for row in selection.first.row..=selection.last.row {
             match self.lines.get(row) {
                 Some(line) => {
-                    let l = if row == selection.first.row { selection.first.column } else { 0 };
-                    let r = if row == selection.last.row { selection.last.column } else { line.len() };
+                    let l = if row == selection.first.row {
+                        selection.first.column
+                    } else {
+                        0
+                    };
+                    let r = if row == selection.last.row {
+                        selection.last.column
+                    } else {
+                        line.len()
+                    };
 
                     result.push_str(&line[l..r]);
                     result.push_str("\n");
-                },
+                }
                 _ => (),
             }
         }

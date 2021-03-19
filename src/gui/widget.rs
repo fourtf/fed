@@ -13,7 +13,7 @@ pub enum Outcome {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DrawInfo {
-    pub is_focused: bool
+    pub is_focused: bool,
 }
 
 pub trait Widget {

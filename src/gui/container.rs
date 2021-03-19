@@ -1,4 +1,4 @@
-use super::widget::{Event, Outcome, Widget, DrawInfo};
+use super::widget::{DrawInfo, Event, Outcome, Widget};
 use skia_safe as skia;
 
 pub struct Container {
@@ -71,7 +71,7 @@ impl Widget for Container {
                 DrawInfo {
                     is_focused: info.is_focused && i == self.selected_index,
                     ..info
-                }
+                },
             );
 
             x += element_width;
