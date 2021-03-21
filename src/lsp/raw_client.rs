@@ -1,3 +1,5 @@
+use crate::args;
+use ansi_term::Colour::{Cyan, Fixed, Green};
 use std::io::Read;
 use std::{
     error::Error,
@@ -27,9 +29,16 @@ impl RawClient {
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+        let inherit_stderr = args::VERBOSE_LSP_STDERR.load(std::sync::atomic::Ordering::Relaxed);
+
         let mut cmd = Command::new(self.bin_path.as_os_str())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
+            .stderr(if inherit_stderr {
+                Stdio::inherit()
+            } else {
+                Stdio::null()
+            })
             .spawn()?;
 
         let stdin = cmd
@@ -90,6 +99,14 @@ fn spawn_read_thread(stdout: ChildStdout, sender: Sender<Vec<u8>>) {
                 _ => (),
             }
 
+            if args::VERBOSE_LSP.load(std::sync::atomic::Ordering::Relaxed) {
+                println!(
+                    "{} {}",
+                    Fixed(8).paint("lsp read"),
+                    Green.paint(String::from_utf8(data.clone()).unwrap_or(String::new()))
+                );
+            }
+
             sender
                 .send(data)
                 .map_err(|e| eprintln!("Error while sending data in lsp: {}", e))
@@ -145,7 +162,13 @@ fn spawn_write_thread(mut stdin: ChildStdin, receiver: Receiver<Vec<u8>>) {
     thread::spawn(move || loop {
         match receiver.recv() {
             Ok(msg) => {
-                println!("{:?}", String::from_utf8(msg.clone()));
+                if args::VERBOSE_LSP.load(std::sync::atomic::Ordering::Relaxed) {
+                    println!(
+                        "{} {}",
+                        Fixed(8).paint("lsp write"),
+                        Cyan.paint(String::from_utf8(msg.clone()).unwrap_or(String::new()))
+                    );
+                }
 
                 //Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n
                 let header = format!("Content-Length: {}\r\n\r\n", msg.len());

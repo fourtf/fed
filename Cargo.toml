@@ -24,3 +24,5 @@ clipboard = "0.5"
 
 smallvec = "1.6.1"
 itoa = "0.4.7"
+
+ansi_term = "0.12.1"
