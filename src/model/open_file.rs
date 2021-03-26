@@ -18,6 +18,7 @@ pub struct OpenFile {
 }
 
 impl OpenFile {
+    // TODO: rename to load_from_path
     pub fn new(path: PathBuf) -> Self {
         let doc = TextModel::new();
         let doc = match doc.load_from(&path) {

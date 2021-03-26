@@ -117,7 +117,7 @@ pub fn run(state: EditorStateRef) {
     let font = Rc::new(skia::Font::new(tf, Some(20.)));
 
     let mut files = Files::new(state.clone(), font.clone());
-    files.load_files(state.borrow().work_dir.clone());
+    files.load_files(state.borrow().work_dir().clone());
 
     let mut root_widget = Container::make_row(crate::collection_items![
         Box::new(files),

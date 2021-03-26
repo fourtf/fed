@@ -1,8 +1,7 @@
 use super::traits::DefaultWidgetDraw;
 use super::widget::{DrawInfo, Event, Outcome, Widget};
 use crate::input::Location;
-use crate::model::EditorStateRef;
-use crate::model::{Selection, TextModel};
+use crate::model::{EditorStateRef, OpenFile, Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::{ModifiersState, VirtualKeyCode};
 use skia_safe as skia;
@@ -15,14 +14,17 @@ pub struct Editor {
     pub font: Rc<skia::Font>,
 }
 
+static empty_open_file: OpenFile = Default::default();
+
 impl Widget for Editor {
     fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let state = self.state.borrow_mut();
 
         let font = &*self.font;
-        let doc = &state.open_file.model;
-        let selection = &state.open_file.selection;
-        let input = &state.input;
+        let open_file = state.open_file().as_ref().unwrap_or(&empty_open_file);
+        let doc = &open_file.model;
+        let selection = &open_file.selection;
+        let input = &state.input();
 
         let paint = skia::Paint::new(skia::Color4f::new(1.0, 1.0, 1.0, 1.0), None);
         let bg_paint = skia::Paint::new(skia::Color4f::new(0.2, 0.2, 0.2, 1.0), None);
@@ -125,51 +127,57 @@ impl Widget for Editor {
     fn handle_event(&mut self, event: &Event) -> Outcome {
         use crate::input::EditorAction::*;
         let state = &self.state;
+        let open_file = state.open_file;
 
         let map_text_model = |f: &dyn Fn(TextModel) -> TextModel| {
-            let new = state.borrow().open_file.model.clone();
+            match state.borrow_mut().open_file() {
+                Some(open_file) => {
+                    let new = open_file.model.clone();
+                    // map
+                    let new = f(new);
+                    open_file.model = new.clone();
 
-            // map
-            let new = f(new);
-            let mut b = state.borrow_mut();
-            b.open_file.model = new.clone();
+                    // undo
+                    if open_file
+                        .last_edit_time
+                        .map(|x| x.elapsed().as_secs() < 1)
+                        .unwrap_or(false)
+                    {
+                        open_file.undo_stack.pop_front();
+                    }
+                    open_file.undo_stack.push_front(new);
 
-            // undo
-            if b.open_file
-                .last_edit_time
-                .map(|x| x.elapsed().as_secs() < 1)
-                .unwrap_or(false)
-            {
-                b.open_file.undo_stack.pop_front();
+                    if open_file.undo_stack.len() > 100 {
+                        open_file.undo_stack.pop_back();
+                    }
+                    open_file.redo_stack.clear();
+
+                    open_file.last_edit_time = Some(Instant::now());
+                }
+                _ => (),
             }
-            b.open_file.undo_stack.push_front(new);
-
-            if b.open_file.undo_stack.len() > 100 {
-                b.open_file.undo_stack.pop_back();
-            }
-            b.open_file.redo_stack.clear();
-
-            b.open_file.last_edit_time = Some(Instant::now());
         };
 
         match event {
             Event::Input(c) => {
-                let actions = state.borrow_mut().input.receive_char(*c);
+                let actions = state.borrow_mut().input_mut().receive_char(*c);
                 for action in actions {
                     match action {
                         InsertString(str) => map_text_model(&|x| x.insert(str.as_str())),
                         InsertNewline => map_text_model(&|x| x.insert_newline()),
                         DeleteLeft => map_text_model(&|x| x.backspace_key()),
                         Copy => {
-                            let s = state
-                                .borrow()
-                                .open_file
-                                .model
-                                .get_string(state.borrow().open_file.selection);
+                            match state.borrow().open_file() {
+                                Some(open_file) => {
+                                    let s = open_file.model.get_string(open_file.selection);
 
-                            // TODO: make safe
-                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                            ctx.set_contents(s).unwrap();
+                                    // TODO: make safe
+                                    let mut ctx: ClipboardContext =
+                                        ClipboardProvider::new().unwrap();
+                                    ctx.set_contents(s).unwrap();
+                                }
+                                _ => (),
+                            }
                         }
                         Paste => {
                             let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
