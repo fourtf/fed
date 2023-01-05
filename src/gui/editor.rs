@@ -1,10 +1,11 @@
 use super::traits::DefaultWidgetDraw;
 use super::widget::{DrawInfo, Event, Outcome, Widget};
 use crate::input::Location;
-use crate::model::{EditorStateRef, OpenFile, Selection, TextModel};
+use crate::model::{EditorState, EditorStateRef, OpenFile, Selection, TextModel};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::{ModifiersState, VirtualKeyCode};
 use skia_safe as skia;
+use tap::prelude::*;
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -14,14 +15,13 @@ pub struct Editor {
     pub font: Rc<skia::Font>,
 }
 
-static empty_open_file: OpenFile = Default::default();
-
 impl Widget for Editor {
     fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
-        let state = self.state.borrow_mut();
+        let state = self.state.borrow();
 
         let font = &*self.font;
-        let open_file = state.open_file().as_ref().unwrap_or(&empty_open_file);
+        let empty_file: OpenFile = Default::default();
+        let open_file = state.open_file().as_ref().unwrap_or(&empty_file);
         let doc = &open_file.model;
         let selection = &open_file.selection;
         let input = &state.input();
@@ -126,126 +126,148 @@ impl Widget for Editor {
 
     fn handle_event(&mut self, event: &Event) -> Outcome {
         use crate::input::EditorAction::*;
-        let state = &self.state;
-        let open_file = state.open_file;
+        let mut state = self.state.borrow_mut();
 
-        let map_text_model = |f: &dyn Fn(TextModel) -> TextModel| {
-            match state.borrow_mut().open_file() {
-                Some(open_file) => {
-                    let new = open_file.model.clone();
-                    // map
-                    let new = f(new);
-                    open_file.model = new.clone();
+        let transform_text = |state: &mut EditorState, f: &dyn Fn(&mut OpenFile) -> TextModel| {
+            state.edit_open_file(|file| {
+                f(file);
 
-                    // undo
-                    if open_file
-                        .last_edit_time
-                        .map(|x| x.elapsed().as_secs() < 1)
-                        .unwrap_or(false)
-                    {
-                        open_file.undo_stack.pop_front();
-                    }
-                    open_file.undo_stack.push_front(new);
+                // map
+                file.model = f(file);
 
-                    if open_file.undo_stack.len() > 100 {
-                        open_file.undo_stack.pop_back();
-                    }
-                    open_file.redo_stack.clear();
-
-                    open_file.last_edit_time = Some(Instant::now());
+                // undo
+                if file
+                    .last_edit_time
+                    .map(|x| x.elapsed().as_secs() < 1)
+                    .unwrap_or(false)
+                {
+                    file.undo_stack.pop_front();
                 }
-                _ => (),
-            }
+                file.undo_stack.push_front(file.model.clone());
+
+                if file.undo_stack.len() > 100 {
+                    file.undo_stack.pop_back();
+                }
+                file.redo_stack.clear();
+
+                // timestamp
+                file.last_edit_time = Some(Instant::now());
+            });
         };
 
         match event {
             Event::Input(c) => {
-                let actions = state.borrow_mut().input_mut().receive_char(*c);
+                let actions = state.input_mut().receive_char(*c);
+
+                match state.open_file() {
+                    Some(open_file) => (),
+                    None => return Outcome::Ignored,
+                };
+
                 for action in actions {
                     match action {
-                        InsertString(str) => map_text_model(&|x| x.insert(str.as_str())),
-                        InsertNewline => map_text_model(&|x| x.insert_newline()),
-                        DeleteLeft => map_text_model(&|x| x.backspace_key()),
-                        Copy => {
-                            match state.borrow().open_file() {
-                                Some(open_file) => {
-                                    let s = open_file.model.get_string(open_file.selection);
+                        InsertString(str) => {
+                            transform_text(&mut state, &|x| x.model.insert(str.as_str()))
+                        }
+                        InsertNewline => transform_text(&mut state, &|x| x.model.insert_newline()),
+                        DeleteLeft => transform_text(&mut state, &|x| x.model.backspace_key()),
 
-                                    // TODO: make safe
-                                    let mut ctx: ClipboardContext =
-                                        ClipboardProvider::new().unwrap();
-                                    ctx.set_contents(s).unwrap();
-                                }
-                                _ => (),
-                            }
+                        Copy => {
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let s = file.model.get_string(file.selection);
+                                let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                                ctx.set_contents(s).unwrap();
+                                file.model.clone()
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         Paste => {
-                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                            // TODO: make safe
-                            let s = ctx.get_contents().unwrap_or(String::new());
-                            map_text_model(&|x| x.insert(&*s));
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                                let s = ctx.get_contents().unwrap_or(String::new());
+                                file.model.insert(&*s)
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         Cut => {
-                            let selection = state.borrow().open_file.selection;
-                            state.borrow_mut().open_file.selection = Selection::empty();
-                            map_text_model(&|x| x.delete(selection));
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let selection = file.selection;
+                                file.selection = Selection::empty();
+                                let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                                ctx.set_contents(file.model.get_string(selection)).unwrap();
+                                file.model.delete(selection)
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         BeginSelection => {
-                            let cursor = state.borrow().open_file.model.cursor;
-                            state.borrow_mut().open_file.selection =
-                                crate::model::Selection::new(cursor, cursor);
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let cursor = file.model.cursor;
+                                file.selection = crate::model::Selection::new(cursor, cursor);
+                                file.model.clone()
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         EndSelection => {
-                            state.borrow_mut().open_file.selection = Selection::empty();
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                file.selection = Selection::empty();
+                                file.model.clone()
+                            };
+                            transform_text(&mut state, &transform);
                         }
-                        GoTo(loc) => match loc {
-                            Location::EndOfLine => {
-                                map_text_model(&|x| x.move_cursor((0, 1000000000)))
-                            }
-                            Location::StartOfLine => {
-                                map_text_model(&|x| x.move_cursor((0, -1000000000)))
-                            }
-                            Location::FirstLine => {
-                                map_text_model(&|x| x.move_cursor((-1000000000, 0)))
-                            }
-                            Location::LastLine => {
-                                map_text_model(&|x| x.move_cursor((1000000000, 0)))
-                            }
-                            Location::Offset(delta) => map_text_model(&|x| x.move_cursor(delta)),
-                        },
-                        Undo => {
-                            let old_model = state.borrow().open_file.model.clone();
-                            let mut s = state.borrow_mut();
-                            match s.open_file.undo_stack.pop_front() {
-                                Some(model) => {
-                                    s.open_file.redo_stack.push_front(old_model);
-                                    s.open_file.model = model;
+                        GoTo(loc) => {
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                match loc {
+                                    Location::EndOfLine => file.model.move_cursor((0, 1000000000)),
+                                    Location::StartOfLine => {
+                                        file.model.move_cursor((0, -1000000000))
+                                    }
+                                    Location::FirstLine => file.model.move_cursor((-1000000000, 0)),
+                                    Location::LastLine => file.model.move_cursor((1000000000, 0)),
+                                    Location::Offset(delta) => file.model.move_cursor(delta),
                                 }
-                                None => (),
-                            }
+                            };
+                            transform_text(&mut state, &transform);
+                        }
+                        Undo => {
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let old_model = file.model.clone();
+                                match file.undo_stack.pop_front() {
+                                    Some(model) => {
+                                        file.redo_stack.push_front(old_model);
+                                        model
+                                    }
+                                    None => file.model.clone(),
+                                }
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         Redo => {
-                            let old_model = state.borrow().open_file.model.clone();
-                            let mut s = state.borrow_mut();
-                            match s.open_file.redo_stack.pop_front() {
-                                Some(model) => {
-                                    s.open_file.undo_stack.push_front(old_model);
-                                    s.open_file.model = model;
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                let old_model = file.model.clone();
+                                match file.redo_stack.pop_front() {
+                                    Some(model) => {
+                                        file.undo_stack.push_front(old_model);
+                                        model
+                                    }
+                                    None => file.model.clone(),
                                 }
-                                None => (),
-                            }
+                            };
+                            transform_text(&mut state, &transform);
                         }
                         FormatDocument => {
-                            map_text_model(&|x| match rust_fmt(&x.get_string_all()) {
-                                Ok(text) => {
-                                    println!("Formatted");
-                                    x.with_content(&*text)
+                            let transform = |file: &mut OpenFile| -> TextModel {
+                                match rust_fmt(&file.model.get_string_all()) {
+                                    Ok(text) => {
+                                        println!("Formatted");
+                                        file.model.with_content(&*text)
+                                    }
+                                    Err(e) => {
+                                        eprintln!("error while formatting: {}", e);
+                                        file.model.clone()
+                                    }
                                 }
-                                Err(e) => {
-                                    eprintln!("error while formatting: {}", e);
-                                    x
-                                }
-                            })
+                            };
+                            transform_text(&mut state, &transform);
                         }
                     };
                 }
@@ -266,46 +288,60 @@ impl Widget for Editor {
                     let mut outcome = Outcome::Handled;
 
                     if Some(VirtualKeyCode::Up) == virtual_keycode {
-                        map_text_model(&|x| x.move_cursor((-1, 0)));
+                        let transform =
+                            |file: &mut OpenFile| -> TextModel { file.model.move_cursor((-1, 0)) };
+                        transform_text(&mut state, &transform);
                     } else if Some(VirtualKeyCode::Down) == virtual_keycode {
-                        map_text_model(&|x| x.move_cursor((1, 0)));
+                        let transform =
+                            |file: &mut OpenFile| -> TextModel { file.model.move_cursor((1, 0)) };
+                        transform_text(&mut state, &transform);
                     } else if Some(VirtualKeyCode::Left) == virtual_keycode {
-                        map_text_model(&|x| x.move_cursor((0, -1)));
+                        let transform =
+                            |file: &mut OpenFile| -> TextModel { file.model.move_cursor((0, -1)) };
+                        transform_text(&mut state, &transform);
                     } else if Some(VirtualKeyCode::Right) == virtual_keycode {
-                        map_text_model(&|x| x.move_cursor((0, 1)));
+                        let transform =
+                            |file: &mut OpenFile| -> TextModel { file.model.move_cursor((0, 1)) };
+                        transform_text(&mut state, &transform);
                     } else if Some(VirtualKeyCode::Tab) == virtual_keycode {
-                        map_text_model(&|x| x.insert("    "));
+                        let transform =
+                            |file: &mut OpenFile| -> TextModel { file.model.insert("    ") };
+                        transform_text(&mut state, &transform);
                     } else {
                         outcome = Outcome::Ignored;
                     }
 
-                    let mode = state.borrow().input.mode;
-                    match mode {
+                    let mode = state.input().mode;
+
+                    state.edit_open_file(|open_file| match mode {
                         crate::input::Mode::Visual => {
-                            let selection = state.borrow().open_file.selection;
-                            let cursor = state.borrow().open_file.model.cursor;
-                            state.borrow_mut().open_file.selection = selection.with_end(cursor);
+                            let selection = open_file.selection;
+                            let cursor = open_file.model.cursor;
+                            open_file.selection = selection.with_end(cursor);
                         }
                         crate::input::Mode::VisualLine => {
-                            let selection = state.borrow().open_file.selection;
-                            let cursor = state.borrow().open_file.model.cursor;
-                            let lines = state.borrow().open_file.model.lines.clone();
+                            let selection = open_file.selection;
+                            let cursor = open_file.model.cursor;
+                            let lines = open_file.model.lines.clone();
                             let mut selection = selection.with_end(cursor);
                             selection.first.column = 0;
                             selection.last.column =
                                 lines.get(selection.last.row).map(|x| x.len()).unwrap_or(0);
-                            state.borrow_mut().open_file.selection = selection;
+                            open_file.selection = selection;
                         }
                         _ => (),
-                    }
+                    });
 
                     outcome
                 } else if modifiers == ModifiersState::CTRL {
                     if Some(VirtualKeyCode::S) == virtual_keycode {
-                        match state.borrow().open_file.save() {
-                            Err(e) => println!("Error while saving: {}", e),
-                            _ => println!("Saved successfully"),
-                        }
+                        state
+                            .open_file()
+                            .as_ref()
+                            .tap_some(|open_file| match open_file.save() {
+                                Err(e) => println!("Error while saving: {}", e),
+                                _ => println!("Saved successfully"),
+                            });
                         Outcome::Handled
                     } else {
                         Outcome::Ignored

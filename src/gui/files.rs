@@ -188,7 +188,7 @@ impl Widget for Files {
 
                     match path {
                         Some(path) => {
-                            self.editor_state.borrow_mut().open_file = OpenFile::new(path)
+                            self.editor_state.borrow_mut().set_open_file(Some(OpenFile::new(path)))
                         }
                         None => eprintln!("nothing selected"),
                     }

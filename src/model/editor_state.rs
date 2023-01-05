@@ -24,18 +24,18 @@ impl EditorState {
         }))
     }
 
-    pub fn set_open_file(&mut self, file: Option<OpenFile>) {
-        self.file = file;
-
-        //self.lsp_client.
-    }
-
     pub fn open_file(&self) -> &Option<OpenFile> {
         return &self.open_file;
     }
 
-    pub fn open_file_mut(&mut self) -> &mut Option<OpenFile> {
-        return &mut self.open_file;
+    pub fn set_open_file(&mut self, open_file: Option<OpenFile>) {
+        self.open_file = open_file;
+    }
+
+    pub fn edit_open_file(&mut self, f: impl FnOnce(&mut OpenFile)) {
+        if let Some(ref mut open_file) = self.open_file {
+            f(open_file);
+        }
     }
 
     pub fn work_dir(&self) -> &PathBuf {
@@ -47,10 +47,10 @@ impl EditorState {
     }
 
     pub fn input(&self) -> &VimInput {
-        &mut self.input
+        &self.input
     }
 
-    pub fn input_mut(&self) -> &mut VimInput {
+    pub fn input_mut(&mut self) -> &mut VimInput {
         &mut self.input
     }
 }

@@ -37,16 +37,17 @@ fn main() {
 
     let work_dir = path.clone().canonicalize().unwrap_or_else(|_| path.clone());
 
-    let mut lsp_client = crate::lsp::Client::new("rls".into(), work_dir);
+    let mut lsp_client = crate::lsp::Client::new("rls".into(), work_dir.clone());
     lsp_client
         .run()
         .map_err(|e| eprintln!("error running lsp: {}", e))
         .ok();
 
-    let mut state = model::EditorState::new_ref(work_dir);
-    let state_borrow = state.borrow_mut();
+    let state = model::EditorState::new_ref(work_dir);
+    let mut state_borrow = state.borrow_mut();
     state_borrow.set_open_file(Some(model::OpenFile::new(path.clone())));
     state_borrow.set_lsp_client(Some(lsp_client));
+    drop(state_borrow);
 
     gui::run(state);
 }
