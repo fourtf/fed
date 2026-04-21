@@ -27,8 +27,8 @@ use std::rc::Rc;
 #[cfg(all(not(target_os = "android")))]
 pub fn run(state: EditorStateRef) {
     use skia_safe::gpu::gl::FramebufferInfo;
-    use skia_safe::gpu::{BackendRenderTarget, SurfaceOrigin};
-    use skia_safe::{Color, ColorType, Surface};
+    use skia_safe::gpu::{self, Protected, SurfaceOrigin};
+    use skia_safe::{Color, ColorType};
     use std::convert::TryInto;
 
     use glutin::event::{Event, WindowEvent};
@@ -62,7 +62,11 @@ pub fn run(state: EditorStateRef) {
 
     gl::load_with(|s| windowed_context.get_proc_address(&s));
 
-    let mut gr_context = skia_safe::gpu::DirectContext::new_gl(None, None).unwrap();
+    let interface = skia_safe::gpu::gl::Interface::new_load_with(|name| {
+        windowed_context.get_proc_address(name) as _
+    })
+    .unwrap();
+    let mut gr_context = skia_safe::gpu::direct_contexts::make_gl(interface, None).unwrap();
 
     let fb_info = {
         let mut fboid: GLint = 0;
@@ -71,6 +75,7 @@ pub fn run(state: EditorStateRef) {
         FramebufferInfo {
             fboid: fboid.try_into().unwrap(),
             format: skia_safe::gpu::gl::Format::RGBA8.into(),
+            protected: Protected::No,
         }
     };
 
@@ -81,7 +86,7 @@ pub fn run(state: EditorStateRef) {
     ) -> skia_safe::Surface {
         let pixel_format = windowed_context.get_pixel_format();
         let size = windowed_context.window().inner_size();
-        let backend_render_target = BackendRenderTarget::new_gl(
+        let backend_render_target = gpu::backend_render_targets::make_gl(
             (
                 size.width.try_into().unwrap(),
                 size.height.try_into().unwrap(),
@@ -90,7 +95,7 @@ pub fn run(state: EditorStateRef) {
             pixel_format.stencil_bits.try_into().unwrap(),
             *fb_info,
         );
-        Surface::from_backend_render_target(
+        gpu::surfaces::wrap_backend_render_target(
             gr_context,
             &backend_render_target,
             SurfaceOrigin::BottomLeft,
@@ -99,21 +104,33 @@ pub fn run(state: EditorStateRef) {
             None,
         )
         .unwrap()
-    };
+    }
 
     let mut surface = create_surface(&windowed_context, &fb_info, &mut gr_context);
     // let sf = windowed_context.window().scale_factor() as f32;
     // surface.canvas().scale((sf, sf));
 
-    let tf = skia::Typeface::new(
-        "Consolas",
-        skia::FontStyle::new(
-            skia::font_style::Weight::MEDIUM,
-            skia::font_style::Width::NORMAL,
-            skia::font_style::Slant::Upright,
-        ),
-    )
-    .unwrap();
+    let font_mgr = skia_safe::FontMgr::new();
+    let tf = font_mgr
+        .match_family_style(
+            "Consolas",
+            skia::FontStyle::new(
+                skia::font_style::Weight::MEDIUM,
+                skia::font_style::Width::NORMAL,
+                skia::font_style::Slant::Upright,
+            ),
+        )
+        .or_else(|| {
+            font_mgr.match_family_style(
+                "Courier New",
+                skia::FontStyle::new(
+                    skia::font_style::Weight::MEDIUM,
+                    skia::font_style::Width::NORMAL,
+                    skia::font_style::Slant::Upright,
+                ),
+            )
+        })
+        .unwrap();
     let font = Rc::new(skia::Font::new(tf, Some(20.)));
 
     let mut files = Files::new(state.clone(), font.clone());
@@ -170,7 +187,7 @@ pub fn run(state: EditorStateRef) {
 
                     root_widget.draw(canvas, &rect, DrawInfo { is_focused: true });
                 }
-                surface.canvas().flush();
+                gr_context.flush_and_submit_surface(&mut surface, None);
                 windowed_context.swap_buffers().unwrap();
             }
             _ => (),

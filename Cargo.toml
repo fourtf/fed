@@ -10,9 +10,9 @@ edition = "2018"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-skia-safe = { version = "0", features = ["gl"] }
-glutin = ""
-gl = ""
+skia-safe = { version = "0.93.1", features = ["gl"] }
+glutin = "0.26.0"
+gl = "0.14.0"
 
 im = "15"
 

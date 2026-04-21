@@ -16,7 +16,7 @@ pub struct Editor {
 }
 
 impl Widget for Editor {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
+    fn draw(&mut self, canvas: &skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let state = self.state.borrow_mut();
 
         let font = &*self.font;

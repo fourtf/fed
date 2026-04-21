@@ -60,7 +60,7 @@ impl Container {
 }
 
 impl Widget for Container {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
+    fn draw(&mut self, canvas: &skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         let element_width = bounds.width() as f32 / self.items.len().max(1) as f32;
         let mut x = bounds.x();
 

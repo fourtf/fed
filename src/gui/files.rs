@@ -136,7 +136,7 @@ fn read_files(path: PathBuf, depth_left: usize) -> Vec<File> {
 }
 
 impl Widget for Files {
-    fn draw(&mut self, canvas: &mut skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
+    fn draw(&mut self, canvas: &skia::Canvas, bounds: &skia::Rect, info: DrawInfo) {
         canvas.save();
         canvas.clip_rect(bounds, skia::ClipOp::Intersect, false);
         let paint = skia::Paint::new(colors::white(), None);
@@ -208,7 +208,7 @@ impl Widget for Files {
 }
 
 fn draw_file(
-    canvas: &mut skia::Canvas,
+    canvas: &skia::Canvas,
     font: &skia::Font,
     f: &File,
     x: f32,

@@ -17,7 +17,7 @@ pub struct DrawInfo {
 }
 
 pub trait Widget {
-    fn draw(&mut self, _canvas: &mut skia::Canvas, _bounds: &skia::Rect, _info: DrawInfo) {}
+    fn draw(&mut self, _canvas: &skia::Canvas, _bounds: &skia::Rect, _info: DrawInfo) {}
 
     fn handle_event(&mut self, _event: &Event) -> Outcome {
         Outcome::Ignored
