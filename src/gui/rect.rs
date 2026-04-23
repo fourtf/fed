@@ -1,8 +1,9 @@
-use super::widget::{DrawInfo, Widget};
 use super::Shrink1;
+use super::widget::{DrawInfo, Widget};
 use crate::gui::traits::DefaultWidgetDraw;
 use skia_safe as skia;
 
+#[allow(unused)]
 pub struct Rect {}
 
 impl Widget for Rect {

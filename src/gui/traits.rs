@@ -1,8 +1,9 @@
-use super::colors;
 use super::DrawInfo;
+use super::colors;
 use skia_safe as skia;
 use skia_safe::{Canvas, Paint, Rect};
 
+#[allow(unused)]
 pub trait Shrink1 {
     fn shrunken_by_1(&self) -> Rect;
 }

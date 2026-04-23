@@ -321,7 +321,7 @@ fn rust_fmt(s: &String) -> std::io::Result<String> {
 
     let child_stdin = child.stdin.as_mut().unwrap();
     child_stdin.write_all(s.as_bytes())?;
-    drop(child_stdin);
+    let _ = child_stdin;
 
     let output = child.wait_with_output()?;
 
